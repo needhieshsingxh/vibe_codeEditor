@@ -1,5 +1,11 @@
 import NextAuth from "next-auth"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { PrismaAdapter } from "@auth/prisma-adapter";
 
 
-export const {auth, handlers, signIn, signOut} = NextAuth({});
+export const {auth, handlers, signIn, signOut} = NextAuth({
+    callbacks:{
+        async signIn({user, account, profile}){
+
+        }
+    }
+});
