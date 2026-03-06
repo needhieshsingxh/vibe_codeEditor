@@ -1,5 +1,9 @@
 import {Button} from "@/components/ui/button"
 import Image from "next/image";
+import {db} from "@/lib/db";
+import UserButton from "@/modules/auth/components/user-button";
+import LogoutButton from "@/modules/auth/components/logout-button"
+
 
 export default function Home() {
   return (
@@ -7,6 +11,8 @@ export default function Home() {
      <Button>
          Get Started  
      </Button>
+     <UserButton/>
+     
     </div>
   );
 }
