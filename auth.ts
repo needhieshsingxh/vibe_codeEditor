@@ -38,9 +38,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         });
       } else {
         const existingAccount = await db.account.findUnique({
-          provider_providerAccountId: {
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
           },
         });
       }
