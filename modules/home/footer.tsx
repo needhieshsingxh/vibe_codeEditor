@@ -22,10 +22,10 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col items-center space-y-6 text-center">
+    <footer className="relative z-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-0 flex flex-col items-center space-y-6 text-center">
         {/* Social Links */}
-        <div className="flex gap-4">
+        {/* <div className="flex gap-4">
           {socialLinks.map((link, index) => (
             <Link
               key={index}
@@ -36,10 +36,10 @@ export function Footer() {
               {link.icon}
             </Link>
           ))}
-        </div>
+        </div> */}
 
         {/* Copyright Notice */}
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-zinc-500 dark:text-zinc-100">
           &copy; {new Date().getFullYear()} Codesnippet. All rights reserved.
         </p>
       </div>

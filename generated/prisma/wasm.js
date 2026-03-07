@@ -113,6 +113,24 @@ exports.Prisma.AccountScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.PlaygroundScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  template: 'template',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  userId: 'userId'
+};
+
+exports.Prisma.StarMarkScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  playgroundId: 'playgroundId',
+  isMarked: 'isMarked',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -128,9 +146,20 @@ exports.UserRole = exports.$Enums.UserRole = {
   PREMIUM_USER: 'PREMIUM_USER'
 };
 
+exports.Templates = exports.$Enums.Templates = {
+  REACT: 'REACT',
+  NEXTJS: 'NEXTJS',
+  EXPRESS: 'EXPRESS',
+  VUE: 'VUE',
+  HONO: 'HONO',
+  ANGULAR: 'ANGULAR'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
-  Account: 'Account'
+  Account: 'Account',
+  Playground: 'Playground',
+  StarMark: 'StarMark'
 };
 /**
  * Create the Client
@@ -171,7 +200,6 @@ const config = {
     "db"
   ],
   "activeProvider": "mongodb",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -180,13 +208,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mongodb\"\n  url      = env(\"DATABASE_URL\")\n}\n\nenum UserRole {\n  ADMIN\n  USER\n  PREMIUM_USER\n}\n\nmodel User {\n  id       String    @id @default(auto()) @map(\"_id\") @db.ObjectId\n  name     String?\n  email    String    @unique\n  image    String?\n  accounts Account[]\n  role     UserRole  @default(USER)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Account {\n  id                String  @id @default(auto()) @map(\"_id\") @db.ObjectId\n  userId            String  @map(\"user_id\") @db.ObjectId\n  type              String\n  provider          String\n  providerAccountId String\n  refresh_token     String? @map(\"refresh_token\")\n  access_token      String? @map(\"access_token\")\n  expires_at        Int?    @map(\"expires_at\")\n  token_type        String?\n  scope             String?\n  id_token          String? @map(\"id_token\")\n  session_state     String? @map(\"session_state\")\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([provider, providerAccountId])\n  @@index([userId])\n}\n",
-  "inlineSchemaHash": "9a8525e819f7f15e990d31c75c8b72928cfb0251af9a2220a91598d09dbd35d1",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mongodb\"\n  url      = env(\"DATABASE_URL\")\n}\n\nenum UserRole {\n  ADMIN\n  USER\n  PREMIUM_USER\n}\n\nmodel User {\n  id       String    @id @default(auto()) @map(\"_id\") @db.ObjectId\n  name     String?\n  email    String    @unique\n  image    String?\n  accounts Account[]\n  role     UserRole  @default(USER)\n\n  myPlayground Playground[]\n  starMarks    StarMark[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Account {\n  id                String  @id @default(auto()) @map(\"_id\") @db.ObjectId\n  userId            String  @map(\"user_id\") @db.ObjectId\n  type              String\n  provider          String\n  providerAccountId String\n  refresh_token     String? @map(\"refresh_token\")\n  access_token      String? @map(\"access_token\")\n  expires_at        Int?    @map(\"expires_at\")\n  token_type        String?\n  scope             String?\n  id_token          String? @map(\"id_token\")\n  session_state     String? @map(\"session_state\")\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([provider, providerAccountId])\n  @@index([userId])\n}\n\nenum Templates {\n  REACT\n  NEXTJS\n  EXPRESS\n  VUE\n  HONO\n  ANGULAR\n}\n\nmodel Playground {\n  id          String    @id @default(cuid()) @map(\"_id\")\n  title       String\n  description String?\n  template    Templates @default(REACT)\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n\n  userId String\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  starMarks StarMark[]\n}\n\nmodel StarMark {\n  id           String     @id @default(auto()) @map(\"_id\") @db.ObjectId\n  userId       String\n  playgroundId String\n  isMarked     Boolean\n  createdAt    DateTime   @default(now())\n  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)\n  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)\n\n  @@unique([userId, playgroundId])\n}\n",
+  "inlineSchemaHash": "d0d1ebd7be6b90996e455bcaa65092d8c7b795f42c81c7003bd74e328ca21901",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accounts\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToUser\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"provider\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerAccountId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"refresh_token\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"refresh_token\"},{\"name\":\"access_token\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"access_token\"},{\"name\":\"expires_at\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"expires_at\"},{\"name\":\"token_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"scope\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"id_token\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id_token\"},{\"name\":\"session_state\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"session_state\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AccountToUser\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accounts\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToUser\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"myPlayground\",\"kind\":\"object\",\"type\":\"Playground\",\"relationName\":\"PlaygroundToUser\"},{\"name\":\"starMarks\",\"kind\":\"object\",\"type\":\"StarMark\",\"relationName\":\"StarMarkToUser\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"provider\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerAccountId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"refresh_token\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"refresh_token\"},{\"name\":\"access_token\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"access_token\"},{\"name\":\"expires_at\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"expires_at\"},{\"name\":\"token_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"scope\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"id_token\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id_token\"},{\"name\":\"session_state\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"session_state\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AccountToUser\"}],\"dbName\":null},\"Playground\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"template\",\"kind\":\"enum\",\"type\":\"Templates\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PlaygroundToUser\"},{\"name\":\"starMarks\",\"kind\":\"object\",\"type\":\"StarMark\",\"relationName\":\"PlaygroundToStarMark\"}],\"dbName\":null},\"StarMark\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"playgroundId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"isMarked\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"StarMarkToUser\"},{\"name\":\"playground\",\"kind\":\"object\",\"type\":\"Playground\",\"relationName\":\"PlaygroundToStarMark\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),
