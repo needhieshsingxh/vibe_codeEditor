@@ -1,6 +1,6 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-import getAllPlaygroundForUser from "@/modules/dashboard/actions";
+import {getAllPlaygroundForUser} from "@/modules/dashboard/actions";
 import { DashboardSidebar } from "@/modules/dashboard/components/dashboard";
 
 export default async function DashboardLayout({
