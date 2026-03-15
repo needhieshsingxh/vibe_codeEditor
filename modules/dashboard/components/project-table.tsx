@@ -54,16 +54,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MarkedToggleButton } from "./toggle-star";
+import {
+  deleteProjectById,
+  duplicateProjectById,
+  editProjectById,
+} from "@/modules/dashboard/actions";
 
 interface ProjectTableProps {
   projects: Project[];
-  onUpdateProject?: (
-    id: string,
-    data: { title: string; description: string },
-  ) => Promise<void>;
-  onDeleteProject?: (id: string) => Promise<void>;
-  onDuplicateProject?: (id: string) => Promise<void>;
-  onMarkasFavorite?: (id: string) => Promise<void>;
 }
 
 interface EditProjectData {
@@ -71,13 +69,7 @@ interface EditProjectData {
   description: string;
 }
 
-export default function ProjectTable({
-  projects,
-  onUpdateProject,
-  onDeleteProject,
-  onDuplicateProject,
-  onMarkasFavorite,
-}: ProjectTableProps) {
+export default function ProjectTable({ projects }: ProjectTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -86,7 +78,6 @@ export default function ProjectTable({
     description: "",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [favoutrie, setFavourite] = useState(false);
 
   const handleEditClick = (project: Project) => {
     setSelectedProject(project);
@@ -104,11 +95,11 @@ export default function ProjectTable({
   };
 
   const handleUpdateProject = async () => {
-    if (!selectedProject || !onUpdateProject) return;
+    if (!selectedProject) return;
 
     setIsLoading(true);
     try {
-      await onUpdateProject(selectedProject.id, editData);
+      await editProjectById(selectedProject.id, editData);
       setEditDialogOpen(false);
       setSelectedProject(null);
       toast.success("Project updated successfully");
@@ -120,27 +111,12 @@ export default function ProjectTable({
     }
   };
 
-  const handleMarkasFavorite = async (project: Project) => {
-    if (!onMarkasFavorite) return;
-
-    setIsLoading(true);
-    try {
-      await onMarkasFavorite(project.id);
-      toast.success("Project marked as favorite successfully");
-    } catch (error) {
-      toast.error("Failed to mark project as favorite");
-      console.error("Error marking project as favorite:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleDeleteProject = async () => {
-    if (!selectedProject || !onDeleteProject) return;
+    if (!selectedProject) return;
 
     setIsLoading(true);
     try {
-      await onDeleteProject(selectedProject.id);
+      await deleteProjectById(selectedProject.id);
       setDeleteDialogOpen(false);
       setSelectedProject(null);
       toast.success("Project deleted successfully");
@@ -153,11 +129,9 @@ export default function ProjectTable({
   };
 
   const handleDuplicateProject = async (project: Project) => {
-    if (!onDuplicateProject) return;
-
     setIsLoading(true);
     try {
-      await onDuplicateProject(project.id);
+      await duplicateProjectById(project.id);
       toast.success("Project duplicated successfully");
     } catch (error) {
       toast.error("Failed to duplicate project");
