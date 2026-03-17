@@ -8,28 +8,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-enum UserRole{
+enum UserRole {
   ADMIN
   USER
   PREMIUM_USER
-}
+} 
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String?
-  email     String   @unique
-  image     String?
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  name     String?
+  email    String    @unique
+  image    String?
   accounts Account[]
-  role UserRole @default(USER)
+  role     UserRole  @default(USER)
 
-  myPlayground  Playground[]
-  starMarks     StarMark[]
+  myPlayground Playground[]
+  starMarks    StarMark[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
@@ -44,17 +42,17 @@ model Account {
   scope             String?
   id_token          String? @map("id_token")
   session_state     String? @map("session_state")
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@unique([provider, providerAccountId])
   @@index([userId])
 }
 
-enum Templates{
+enum Templates {
   REACT
   NEXTJS
   EXPRESS
@@ -62,38 +60,39 @@ enum Templates{
   HONO
   ANGULAR
 }
-model Playground{
-  id String @id @default(cuid()) @map("_id")
-  title String
+
+model Playground {
+  id          String    @id @default(cuid()) @map("_id")
+  title       String
   description String?
-  template Templates @default(REACT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  template    Templates @default(REACT)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  starMarks StarMark[]
+  starMarks    StarMark[]
+  templateFile TemplateFile?
 }
 
-model StarMark{
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  userId String
+model StarMark {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String
   playgroundId String
-  isMarked Boolean
-  createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+  isMarked     Boolean
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
 
   @@unique([userId, playgroundId])
 }
 
-model TemplateFile{
-  id String @id @default(cuid()) @map("_id")
-  content Json
-  createdAt DateTime @default(NOW())   
-  updatedAt DateTime @updatedAt
-  playgroundId String @unique
-  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade )
- 
+model TemplateFile {
+  id           String     @id @default(cuid()) @map("_id")
+  content      Json
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  playgroundId String     @unique
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
 }

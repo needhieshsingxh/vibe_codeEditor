@@ -19,7 +19,7 @@ const page = () => {
 
                     </div>
 
-                </div>
+                </div> 
 
             </header>
         </SidebarInset>
