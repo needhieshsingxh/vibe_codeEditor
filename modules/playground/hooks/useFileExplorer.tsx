@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { toast } from "sonner";
-import { TemplateFile, TemplateFolder } from "../types";
+import { TemplateFile, TemplateFolder } from "../lib/path-to-json";
 import { generateFileId } from "../lib";
 
 interface OpenFile extends TemplateFile {
