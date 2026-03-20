@@ -228,8 +228,8 @@ const MainPlaygroundPage = () => {
           }
         }
 
-        const newTemplateData = await saveTemplateData(updatedTemplateData);
-        setTemplateData(newTemplateData || updatedTemplateData);
+        await saveTemplateData(updatedTemplateData);
+        setTemplateData(updatedTemplateData);
         // Update open files
         const updatedOpenFiles = openFiles.map((f) =>
           f.id === targetFileId
@@ -489,7 +489,7 @@ const MainPlaygroundPage = () => {
                 </div>
                 <div className="flex-1">
                   <ResizablePanelGroup
-                    direction="horizontal"
+                    {...({ direction: "horizontal" } as any)}
                     className="h-full"
                   >
                     <ResizablePanel defaultSize={isPreviewVisible ? 50 : 100}>
