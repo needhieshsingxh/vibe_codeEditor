@@ -1,6 +1,8 @@
 import { scanTemplateDirectory } from "@/modules/playground/lib/path-to-json";
+import type { TemplateFolder } from "@/modules/playground/lib/path-to-json";
 import { db } from "@/lib/db";
 import { templatePaths } from "@/lib/template";
+import templateCache from "@/generated/template-cache.json";
 import path from "path";
 import { NextRequest } from "next/server";
 
@@ -42,8 +44,15 @@ export async function GET(
   }
 
   try {
-    const inputPath = path.join(process.cwd(), templatePath);
-    const result = await scanTemplateDirectory(inputPath);
+    const cacheMap = templateCache as Record<
+      string,
+      TemplateFolder | undefined
+    >;
+    const cachedTemplate = cacheMap[templateKey];
+
+    const result: TemplateFolder =
+      cachedTemplate ??
+      (await scanTemplateDirectory(path.join(process.cwd(), templatePath)));
 
     // Validate the JSON structure before saving
     if (!validateJsonStructure(result.items)) {

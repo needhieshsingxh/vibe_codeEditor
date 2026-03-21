@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
   outputFileTracingIncludes: {
     "/api/template/[id]": ["./starters-main/starters-main/**/*"],
+    "/app/api/template/[id]/route": ["./starters-main/starters-main/**/*"],
   },
   images: {
     remotePatterns: [
