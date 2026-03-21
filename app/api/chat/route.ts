@@ -11,6 +11,12 @@ interface ChatRequest {
   model?: string;
 }
 
+interface AIResponseResult {
+  content: string;
+  provider: "gemini" | "openai" | "ollama";
+  model: string;
+}
+
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "codellama:latest";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -20,7 +26,9 @@ const OPENAI_BASE_URL =
   process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-async function generateAIResponse(messages: ChatMessage[]): Promise<string> {
+async function generateAIResponse(
+  messages: ChatMessage[],
+): Promise<AIResponseResult> {
   const systemPrompt = `You are a helpful AI coding assistant. You help developers with:
 - Code explanations and debugging
 - Best practices and architecture advice  
@@ -89,7 +97,11 @@ Always provide clear, practical answers. Use proper code formatting when showing
           throw new Error("No response from AI model");
         }
 
-        return content;
+        return {
+          content,
+          provider: "gemini",
+          model: GEMINI_MODEL,
+        };
       } catch (error) {
         if (
           error instanceof Error &&
@@ -133,7 +145,20 @@ Always provide clear, practical answers. Use proper code formatting when showing
         throw new Error("No response from AI model");
       }
 
-      return content.trim();
+      return {
+        content: content.trim(),
+        provider: "openai",
+        model: OPENAI_MODEL,
+      };
+    }
+
+    const allowOllamaFallback =
+      !!process.env.OLLAMA_BASE_URL && !OLLAMA_BASE_URL.includes("localhost");
+
+    if (!allowOllamaFallback) {
+      throw new Error(
+        "Gemini is unavailable and no OPENAI_API_KEY is configured. Configure OPENAI_API_KEY or OLLAMA_BASE_URL for production.",
+      );
     }
 
     const prompt = fullMessages
@@ -171,7 +196,11 @@ Always provide clear, practical answers. Use proper code formatting when showing
       throw new Error("No response from AI model");
     }
 
-    return data.response.trim();
+    return {
+      content: data.response.trim(),
+      provider: "ollama",
+      model: OLLAMA_MODEL,
+    };
   } catch (error) {
     console.error("AI generation error:", error);
     const message =
@@ -226,24 +255,17 @@ export async function POST(req: NextRequest) {
 
     //   Generate ai response
 
-    const aiResponse = await generateAIResponse(messages);
+    const aiResult = await generateAIResponse(messages);
 
     const requestedModel = typeof model === "string" ? model.trim() : "";
-    const activeModel = GEMINI_API_KEY
-      ? requestedModel || GEMINI_MODEL
-      : OPENAI_API_KEY
-        ? OPENAI_MODEL
-        : OLLAMA_MODEL;
-
-    const provider = GEMINI_API_KEY
-      ? "gemini"
-      : OPENAI_API_KEY
-        ? "openai"
-        : "ollama";
+    const activeModel =
+      requestedModel && aiResult.provider === "gemini"
+        ? requestedModel
+        : aiResult.model;
 
     return NextResponse.json({
-      response: aiResponse,
-      provider,
+      response: aiResult.content,
+      provider: aiResult.provider,
       model: activeModel,
       timestamp: new Date().toISOString(),
     });
