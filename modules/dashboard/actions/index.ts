@@ -17,7 +17,7 @@ export const getAllPlaygroundForUser = async () => {
       },
       include: {
         user: true,
-        starMarks: {
+        Starmark: {
           where: {
             userId: user.id,
           },
@@ -27,10 +27,7 @@ export const getAllPlaygroundForUser = async () => {
         },
       },
     });
-    return playground.map((item) => ({
-      ...item,
-      Starmark: item.starMarks,
-    }));
+    return playground;
   } catch (error) {
     console.log(error);
     return [];
@@ -156,4 +153,3 @@ export const duplicateProjectById = async (id: string) => {
     console.log(error);
   }
 };
-

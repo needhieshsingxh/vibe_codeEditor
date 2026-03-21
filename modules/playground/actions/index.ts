@@ -10,7 +10,7 @@ export const getPlaygroundById = async (id: string) => {
     const playground = await db.playground.findUnique({
       where: { id },
       select: {
-        templateFile: {
+        templateFiles: {
           select: {
             content: true,
           },
@@ -34,7 +34,7 @@ export const SaveUpdatedCode = async (id: string, data: TemplateFolder) => {
     const updatedPlayground = await db.playground.update({
       where: { id },
       data: {
-        templateFile: {
+        templateFiles: {
           create: {
             content: JSON.stringify(data),
           },

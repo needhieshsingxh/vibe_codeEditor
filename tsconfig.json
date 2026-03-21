@@ -31,5 +31,5 @@
     "**/*.mts",
     "app/page"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "starters-main"]
 }
