@@ -15,6 +15,9 @@ export const getAllPlaygroundForUser = async () => {
       where: {
         userId: user.id,
       },
+      orderBy: {
+        updatedAt: "desc",
+      },
       include: {
         user: true,
         Starmark: {
@@ -76,7 +79,11 @@ export const createPlayground = async (data: {
 }) => {
   const user = await currentUser();
   if (!user?.id) {
-    return null;
+    return {
+      success: false as const,
+      error: "You must be signed in to create a project.",
+      playground: null,
+    };
   }
   const { template, title, description } = data;
   try {
@@ -89,10 +96,18 @@ export const createPlayground = async (data: {
       },
     });
     revalidatePath("/dashboard");
-    return playground;
+    return {
+      success: true as const,
+      error: null,
+      playground,
+    };
   } catch (error) {
-    console.log(error);
-    return null;
+    console.error("Failed to create playground:", error);
+    return {
+      success: false as const,
+      error: "We could not save the project. Please try again.",
+      playground: null,
+    };
   }
 };
 
