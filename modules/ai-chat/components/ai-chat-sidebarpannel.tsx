@@ -114,7 +114,7 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
   const [filterType, setFilterType] = useState<string>("all");
   const [autoSave, setAutoSave] = useState(true);
   const [streamResponse, setStreamResponse] = useState(true);
-  const [model, setModel] = useState<string>("gpt-6");
+  const [model, setModel] = useState<string>("gemini-2.0-flash");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -205,14 +205,19 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
           },
         ]);
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        const details =
+          typeof errorData?.details === "string"
+            ? errorData.details
+            : "Please verify your Gemini API key and deployment environment variables.";
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content:
-              "Sorry, I encountered an error while processing your request. Please try again.",
+            content: `I could not complete this request. ${details}`,
             timestamp: new Date(),
             id: Date.now().toString(),
+            type: "error_fix",
           },
         ]);
       }

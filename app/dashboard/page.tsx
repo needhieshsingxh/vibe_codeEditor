@@ -5,6 +5,9 @@ import { getAllPlaygroundForUser } from "@/modules/dashboard/actions";
 import EmptyState from "@/modules/dashboard/components/empty-state";
 import ProjectTable from "@/modules/dashboard/components/project-table";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const page = async () => {
   const playground = await getAllPlaygroundForUser();
   const normalizedPlayground = (playground || []).map((item) => ({

@@ -2,8 +2,10 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@/modules/auth/actions";
 import { revalidatePath } from "next/cache";
+import { unstable_noStore as noStore } from "next/cache";
 
 export const getAllPlaygroundForUser = async () => {
+  noStore();
   const user = await currentUser();
 
   if (!user?.id) {
@@ -96,6 +98,7 @@ export const createPlayground = async (data: {
       },
     });
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard", "layout");
     return {
       success: true as const,
       error: null,
@@ -119,6 +122,7 @@ export const deleteProjectById = async (id: string) => {
       },
     });
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard", "layout");
   } catch (error) {
     console.log(error);
   }
@@ -139,6 +143,7 @@ export const editProjectById = async (
       },
     });
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard", "layout");
   } catch (error) {
     console.log(error);
   }
@@ -163,6 +168,7 @@ export const duplicateProjectById = async (id: string) => {
       },
     });
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard", "layout");
     return duplicatedPlayground;
   } catch (error) {
     console.log(error);

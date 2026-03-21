@@ -8,6 +8,7 @@ interface ChatMessage {
 interface ChatRequest {
   message: string;
   history: ChatMessage[];
+  model?: string;
 }
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
@@ -59,7 +60,10 @@ Always provide clear, practical answers. Use proper code formatting when showing
 
       if (!response.ok) {
         const body = await response.text();
-        throw new Error(`AI provider error (${response.status}): ${body}`);
+        const safeMessage = extractSafeErrorDetails(body);
+        throw new Error(
+          `Gemini error (${response.status}): ${safeMessage || "Unknown Gemini error"}`,
+        );
       }
 
       const data = await response.json();
@@ -96,7 +100,10 @@ Always provide clear, practical answers. Use proper code formatting when showing
 
       if (!response.ok) {
         const body = await response.text();
-        throw new Error(`AI provider error (${response.status}): ${body}`);
+        const safeMessage = extractSafeErrorDetails(body);
+        throw new Error(
+          `OpenAI error (${response.status}): ${safeMessage || "Unknown OpenAI error"}`,
+        );
       }
 
       const data = await response.json();
@@ -132,7 +139,10 @@ Always provide clear, practical answers. Use proper code formatting when showing
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`AI provider error (${response.status}): ${body}`);
+      const safeMessage = extractSafeErrorDetails(body);
+      throw new Error(
+        `Ollama error (${response.status}): ${safeMessage || "Unknown Ollama error"}`,
+      );
     }
 
     const data = await response.json();
@@ -147,19 +157,25 @@ Always provide clear, practical answers. Use proper code formatting when showing
     const message =
       error instanceof Error ? error.message : "Unknown AI provider error";
 
-    // Keep chat UI functional when local model server is unavailable.
-    if (message.includes("ECONNREFUSED") || message.includes("fetch failed")) {
-      return "I couldn't reach the local AI model server at localhost:11434. Start Ollama and pull the selected model, then try again.\n\nQuick fix:\n1) Start Ollama\n2) Run: ollama pull codellama:latest\n3) Retry your chat request";
-    }
+    throw new Error(message || "Failed to generate AI response");
+  }
+}
 
-    throw new Error("Failed to generate AI response");
+function extractSafeErrorDetails(errorBody: string): string {
+  try {
+    const parsed = JSON.parse(errorBody);
+    const message =
+      parsed?.error?.message || parsed?.message || parsed?.error || errorBody;
+    return String(message);
+  } catch {
+    return errorBody;
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body: ChatRequest = await req.json();
-    const { message, history = [] } = body;
+    const { message, history = [], model } = body;
 
     // Validate input
     if (!message || typeof message !== "string") {
@@ -192,14 +208,22 @@ export async function POST(req: NextRequest) {
 
     const aiResponse = await generateAIResponse(messages);
 
+    const requestedModel = typeof model === "string" ? model.trim() : "";
     const activeModel = GEMINI_API_KEY
-      ? GEMINI_MODEL
+      ? requestedModel || GEMINI_MODEL
       : OPENAI_API_KEY
         ? OPENAI_MODEL
         : OLLAMA_MODEL;
 
+    const provider = GEMINI_API_KEY
+      ? "gemini"
+      : OPENAI_API_KEY
+        ? "openai"
+        : "ollama";
+
     return NextResponse.json({
       response: aiResponse,
+      provider,
       model: activeModel,
       timestamp: new Date().toISOString(),
     });
@@ -213,6 +237,11 @@ export async function POST(req: NextRequest) {
       {
         error: "Failed to generate AI response",
         details: errorMessage,
+        provider: GEMINI_API_KEY
+          ? "gemini"
+          : OPENAI_API_KEY
+            ? "openai"
+            : "ollama",
         timestamp: new Date().toISOString(),
       },
       { status: 500 },

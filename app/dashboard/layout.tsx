@@ -1,7 +1,10 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-import {getAllPlaygroundForUser} from "@/modules/dashboard/actions";
+import { getAllPlaygroundForUser } from "@/modules/dashboard/actions";
 import { DashboardSidebar } from "@/modules/dashboard/components/dashboard";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DashboardLayout({
   children,
@@ -20,7 +23,7 @@ export default async function DashboardLayout({
 
   const formattedPlaygroundData = playgoundData?.map((item) => ({
     id: item.id,
-    name: item.title, 
+    name: item.title,
     starred: false,
     icon: technologyIconMap[item.template] || "Code2",
   }));

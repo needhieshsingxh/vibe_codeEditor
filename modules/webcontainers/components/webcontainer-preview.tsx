@@ -13,6 +13,33 @@ const TerminalComponent = dynamic(() => import("./terminal"), {
   ssr: false,
 });
 
+const INSTALL_TIMEOUT_MS = 180000;
+
+async function waitForProcessExitWithTimeout(
+  processExit: Promise<number>,
+  timeoutMs: number,
+): Promise<number> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<number>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(
+        new Error(
+          `Dependency installation timed out after ${Math.floor(timeoutMs / 1000)}s`,
+        ),
+      );
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([processExit, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 interface WebContainerPreviewProps {
   templateData: TemplateFolder;
   serverUrl: string;
@@ -155,7 +182,29 @@ const WebContainerPreview = ({
           );
         }
 
-        const installProcess = await instance.spawn("npm", ["install"]);
+        let installProcess: Awaited<ReturnType<WebContainer["spawn"]>>;
+        let installLabel = "npm install";
+
+        try {
+          await instance.fs.readFile("package-lock.json", "utf8");
+          installLabel = "npm ci --no-audit --no-fund";
+          installProcess = await instance.spawn("npm", [
+            "ci",
+            "--no-audit",
+            "--no-fund",
+          ]);
+        } catch {
+          installLabel = "npm install --no-audit --no-fund";
+          installProcess = await instance.spawn("npm", [
+            "install",
+            "--no-audit",
+            "--no-fund",
+          ]);
+        }
+
+        if (terminalRef.current?.writeToTerminal) {
+          terminalRef.current.writeToTerminal(`▶ ${installLabel}\r\n`);
+        }
 
         installProcess.output.pipeTo(
           new WritableStream({
@@ -167,7 +216,10 @@ const WebContainerPreview = ({
           }),
         );
 
-        const installExitCode = await installProcess.exit;
+        const installExitCode = await waitForProcessExitWithTimeout(
+          installProcess.exit,
+          INSTALL_TIMEOUT_MS,
+        );
 
         if (installExitCode !== 0) {
           throw new Error(
