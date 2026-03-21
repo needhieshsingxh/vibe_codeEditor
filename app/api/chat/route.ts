@@ -63,7 +63,7 @@ Always provide clear, practical answers. Use proper code formatting when showing
           const statusCode = response.status;
           const body = await response.text();
           const safeMessage = extractSafeErrorDetails(body);
-          
+
           if (statusCode === 429) {
             console.warn(
               "Gemini quota exceeded, falling back to OpenAI",
@@ -76,18 +76,18 @@ Always provide clear, practical answers. Use proper code formatting when showing
           );
         }
 
-      const data = await response.json();
-      const parts = data?.candidates?.[0]?.content?.parts;
-      const content = Array.isArray(parts)
-        ? parts
-            .map((part) => (typeof part?.text === "string" ? part.text : ""))
-            .join("")
-            .trim()
-        : "";
+        const data = await response.json();
+        const parts = data?.candidates?.[0]?.content?.parts;
+        const content = Array.isArray(parts)
+          ? parts
+              .map((part) => (typeof part?.text === "string" ? part.text : ""))
+              .join("")
+              .trim()
+          : "";
 
-      if (!content) {
-        throw new Error("No response from AI model");
-      }
+        if (!content) {
+          throw new Error("No response from AI model");
+        }
 
         return content;
       } catch (error) {

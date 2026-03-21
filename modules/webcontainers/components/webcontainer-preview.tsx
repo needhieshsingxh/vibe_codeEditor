@@ -197,7 +197,8 @@ const WebContainerPreview = ({
               "--omit=optional",
             ]);
           } catch {
-            installLabel = "npm install --no-save --legacy-peer-deps --production";
+            installLabel =
+              "npm install --no-save --legacy-peer-deps --production";
             installProcess = await instance.spawn("npm", [
               "install",
               "--no-save",
