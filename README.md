@@ -105,24 +105,10 @@ npm start
 - `npm run lint` - run ESLint
 
 ## Screenshots
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/942b7db7-8136-40bc-a759-fef4bc550c29" />
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/662141f2-0c82-45a0-b257-186651cf08c8" />
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/83ce608f-3b88-46b8-939f-f7482f9105a3" />
 
-Add your screenshots in this section.
-
-Example structure:
-
-```text
-public/screenshots/home.png
-public/screenshots/playground.png
-public/screenshots/ai-chat.png
-```
-
-Markdown placeholders:
-
-```md
-![Home](public/screenshots/home.png)
-![Playground](public/screenshots/playground.png)
-![AI Chat](public/screenshots/ai-chat.png)
-```
 
 ## Deployment
 
@@ -136,7 +122,3 @@ Required env vars on Vercel:
 - `GEMINI_API_KEY` (if using Gemini)
 - OAuth vars if auth providers are enabled (`GOOGLE_ID`, `GOOGLE_SECRET`, `GITHUB_ID`, `GITHUB_SECRET`)
 
-## Notes
-
-- Do not commit your `.env` file.
-- Rotate secrets immediately if they are ever exposed.
