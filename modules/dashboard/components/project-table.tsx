@@ -191,14 +191,16 @@ export default function ProjectTable({ projects }: ProjectTableProps) {
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full overflow-hidden">
                       <Image
-                        src={project.user.image || "/placeholder.svg"}
-                        alt={String(project.user.name ?? "User avatar")}
+                        src={project.user?.image || "/placeholder.svg"}
+                        alt={String(project.user?.name ?? "User avatar")}
                         width={32}
                         height={32}
                         className="object-cover"
                       />
                     </div>
-                    <span className="text-sm">{project.user.name}</span>
+                    <span className="text-sm">
+                      {project.user?.name ?? "Unknown user"}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell>
