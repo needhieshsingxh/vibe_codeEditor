@@ -82,7 +82,9 @@ export const usePlayground = (id: string): UsePlaygroundReturn => {
     } catch (error) {
       console.error("Error loading playground:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to load playground data";
+        error instanceof Error
+          ? error.message
+          : "Failed to load playground data";
       setError(message);
       toast.error(message);
     } finally {
