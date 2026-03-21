@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
+  outputFileTracingIncludes: {
+    "/app/api/template/[id]/route": ["./starters-main/**/*"],
+  },
   images: {
     remotePatterns: [
       {
