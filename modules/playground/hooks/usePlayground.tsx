@@ -6,6 +6,14 @@ import {
 } from "@/modules/playground/actions";
 import type { TemplateFolder } from "@/modules/playground/lib/path-to-json";
 
+const isTemplateFolder = (value: unknown): value is TemplateFolder => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { folderName?: unknown; items?: unknown };
+  return (
+    typeof candidate.folderName === "string" && Array.isArray(candidate.items)
+  );
+};
+
 interface PlaygroundData {
   id: string;
   name?: string;
@@ -41,17 +49,19 @@ export const usePlayground = (id: string): UsePlaygroundReturn => {
       setPlaygroundData(data);
 
       const rawContent = data?.templateFiles?.[0]?.content;
-      if (rawContent && typeof rawContent === "object") {
-        setTemplateData(rawContent as TemplateFolder);
+      if (isTemplateFolder(rawContent)) {
+        setTemplateData(rawContent);
         toast.success("Playground loaded successfully");
         return;
       }
 
       if (typeof rawContent === "string") {
-        const parsedContent = JSON.parse(rawContent) as TemplateFolder;
-        setTemplateData(parsedContent);
-        toast.success("Playground loaded successfully");
-        return;
+        const parsedContent = JSON.parse(rawContent) as unknown;
+        if (isTemplateFolder(parsedContent)) {
+          setTemplateData(parsedContent);
+          toast.success("Playground loaded successfully");
+          return;
+        }
       }
 
       // Load template from API if not in saved content
