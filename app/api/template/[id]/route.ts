@@ -6,6 +6,81 @@ import templateCache from "@/generated/template-cache.json";
 import path from "path";
 import { NextRequest } from "next/server";
 
+const fallbackTemplates: Record<string, TemplateFolder> = {
+  REACT: {
+    folderName: "Root",
+    items: [
+      {
+        filename: "package",
+        fileExtension: "json",
+        content:
+          '{\n  "name": "react-app",\n  "private": true,\n  "scripts": { "dev": "vite" }\n}',
+      },
+      {
+        filename: "main",
+        fileExtension: "jsx",
+        content:
+          'import React from "react";\nimport ReactDOM from "react-dom/client";\n\nReactDOM.createRoot(document.getElementById("root")).render(<h1>Hello React</h1>);\n',
+      },
+    ],
+  },
+  NEXTJS: {
+    folderName: "Root",
+    items: [
+      {
+        filename: "page",
+        fileExtension: "tsx",
+        content:
+          "export default function Page() { return <h1>Hello Next.js</h1>; }\n",
+      },
+    ],
+  },
+  EXPRESS: {
+    folderName: "Root",
+    items: [
+      {
+        filename: "index",
+        fileExtension: "js",
+        content:
+          'const express = require("express");\nconst app = express();\napp.get("/", (_req, res) => res.send("Hello Express"));\napp.listen(3000);\n',
+      },
+    ],
+  },
+  VUE: {
+    folderName: "Root",
+    items: [
+      {
+        filename: "App",
+        fileExtension: "vue",
+        content:
+          "<template><h1>Hello Vue</h1></template>\n<script setup>\n</script>\n",
+      },
+    ],
+  },
+  HONO: {
+    folderName: "Root",
+    items: [
+      {
+        filename: "index",
+        fileExtension: "ts",
+        content:
+          'import { Hono } from "hono";\nconst app = new Hono();\napp.get("/", (c) => c.text("Hello Hono"));\nexport default app;\n',
+      },
+    ],
+  },
+  ANGULAR: {
+    folderName: "Root",
+    items: [
+      {
+        filename: "main",
+        fileExtension: "ts",
+        content:
+          'console.log("Hello Angular");\n// Fallback template generated because starter files were unavailable at runtime.\n',
+      },
+    ],
+  },
+};
+
 // Helper function to ensure valid JSON
 function validateJsonStructure(data: unknown): boolean {
   try {
@@ -50,9 +125,24 @@ export async function GET(
     >;
     const cachedTemplate = cacheMap[templateKey];
 
-    const result: TemplateFolder =
-      cachedTemplate ??
-      (await scanTemplateDirectory(path.join(process.cwd(), templatePath)));
+    let result: TemplateFolder | null = cachedTemplate ?? null;
+
+    if (!result) {
+      try {
+        result = await scanTemplateDirectory(
+          path.join(process.cwd(), templatePath),
+        );
+      } catch (error) {
+        console.warn(
+          `Template source missing for ${templateKey}, using fallback template.`,
+          error,
+        );
+        result = fallbackTemplates[templateKey] ?? {
+          folderName: "Root",
+          items: [],
+        };
+      }
+    }
 
     // Validate the JSON structure before saving
     if (!validateJsonStructure(result.items)) {

@@ -19,13 +19,21 @@ async function main() {
 
   for (const [key, relativePath] of Object.entries(templatePaths)) {
     const inputPath = path.join(projectRoot, relativePath);
-    const structure = await scanTemplateDirectory(inputPath);
-    cache[key] = structure;
+    try {
+      const structure = await scanTemplateDirectory(inputPath);
+      cache[key] = structure;
+    } catch (error) {
+      console.warn(
+        `Skipping template cache for ${key} (${relativePath}): ${error.message}`,
+      );
+    }
   }
 
   await fs.mkdir(outputDir, { recursive: true });
   await fs.writeFile(outputFile, JSON.stringify(cache), "utf8");
-  console.log(`Template cache generated at ${outputFile}`);
+  console.log(
+    `Template cache generated at ${outputFile} with ${Object.keys(cache).length} templates`,
+  );
 }
 
 async function scanTemplateDirectory(templatePath) {
