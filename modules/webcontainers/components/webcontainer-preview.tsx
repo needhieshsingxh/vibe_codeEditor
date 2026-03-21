@@ -182,55 +182,70 @@ const WebContainerPreview = ({
           );
         }
 
-        let installProcess: Awaited<ReturnType<WebContainer["spawn"]>>;
-        let installLabel = "npm install";
-
+        let installSuccess = true;
         try {
-          await instance.fs.readFile("package-lock.json", "utf8");
-          installLabel = "npm ci --no-audit --no-fund";
-          installProcess = await instance.spawn("npm", [
-            "ci",
-            "--no-audit",
-            "--no-fund",
-          ]);
-        } catch {
-          installLabel = "npm install --no-audit --no-fund";
-          installProcess = await instance.spawn("npm", [
-            "install",
-            "--no-audit",
-            "--no-fund",
-          ]);
-        }
+          let installProcess: Awaited<ReturnType<WebContainer["spawn"]>>;
+          let installLabel = "npm install";
 
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal(`▶ ${installLabel}\r\n`);
-        }
+          try {
+            await instance.fs.readFile("package-lock.json", "utf8");
+            installLabel = "npm ci --no-audit --no-fund --omit=optional";
+            installProcess = await instance.spawn("npm", [
+              "ci",
+              "--no-audit",
+              "--no-fund",
+              "--omit=optional",
+            ]);
+          } catch {
+            installLabel = "npm install --no-save --legacy-peer-deps --production";
+            installProcess = await instance.spawn("npm", [
+              "install",
+              "--no-save",
+              "--legacy-peer-deps",
+              "--production",
+            ]);
+          }
 
-        installProcess.output.pipeTo(
-          new WritableStream({
-            write(data) {
-              if (terminalRef.current?.writeToTerminal) {
-                terminalRef.current.writeToTerminal(data);
-              }
-            },
-          }),
-        );
+          if (terminalRef.current?.writeToTerminal) {
+            terminalRef.current.writeToTerminal(`▶ ${installLabel}\r\n`);
+          }
 
-        const installExitCode = await waitForProcessExitWithTimeout(
-          installProcess.exit,
-          INSTALL_TIMEOUT_MS,
-        );
-
-        if (installExitCode !== 0) {
-          throw new Error(
-            `Failed to install dependencies. Exit code: ${installExitCode}`,
+          installProcess.output.pipeTo(
+            new WritableStream({
+              write(data) {
+                if (terminalRef.current?.writeToTerminal) {
+                  terminalRef.current.writeToTerminal(data);
+                }
+              },
+            }),
           );
-        }
 
-        if (terminalRef.current?.writeToTerminal) {
-          terminalRef.current.writeToTerminal(
-            "✅ Dependencies installed successfully\r\n",
+          const installExitCode = await waitForProcessExitWithTimeout(
+            installProcess.exit,
+            INSTALL_TIMEOUT_MS,
           );
+
+          if (installExitCode !== 0) {
+            if (terminalRef.current?.writeToTerminal) {
+              terminalRef.current.writeToTerminal(
+                "⚠ Dependencies install encountered issues, attempting to continue...\r\n",
+              );
+            }
+            installSuccess = false;
+          } else {
+            if (terminalRef.current?.writeToTerminal) {
+              terminalRef.current.writeToTerminal(
+                "✅ Dependencies installed successfully\r\n",
+              );
+            }
+          }
+        } catch (error) {
+          if (terminalRef.current?.writeToTerminal) {
+            terminalRef.current.writeToTerminal(
+              `⚠ Skipping dependency installation and proceeding with server startup...\r\n`,
+            );
+          }
+          installSuccess = false;
         }
 
         setLoadingState((prev) => ({

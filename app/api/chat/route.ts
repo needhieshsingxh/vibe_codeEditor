@@ -34,37 +34,47 @@ Always provide clear, practical answers. Use proper code formatting when showing
 
   try {
     if (GEMINI_API_KEY) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: systemPrompt }],
+              },
+              contents: messages.map((msg) => ({
+                role: msg.role === "assistant" ? "model" : "user",
+                parts: [{ text: msg.content }],
+              })),
+              generationConfig: {
+                temperature: 0.7,
+                topP: 0.9,
+                maxOutputTokens: 1000,
+              },
+            }),
           },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: systemPrompt }],
-            },
-            contents: messages.map((msg) => ({
-              role: msg.role === "assistant" ? "model" : "user",
-              parts: [{ text: msg.content }],
-            })),
-            generationConfig: {
-              temperature: 0.7,
-              topP: 0.9,
-              maxOutputTokens: 1000,
-            },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const body = await response.text();
-        const safeMessage = extractSafeErrorDetails(body);
-        throw new Error(
-          `Gemini error (${response.status}): ${safeMessage || "Unknown Gemini error"}`,
         );
-      }
+
+        if (!response.ok) {
+          const statusCode = response.status;
+          const body = await response.text();
+          const safeMessage = extractSafeErrorDetails(body);
+          
+          if (statusCode === 429) {
+            console.warn(
+              "Gemini quota exceeded, falling back to OpenAI",
+              safeMessage,
+            );
+            throw new Error("GEMINI_QUOTA_EXCEEDED");
+          }
+          throw new Error(
+            `Gemini error (${statusCode}): ${safeMessage || "Unknown Gemini error"}`,
+          );
+        }
 
       const data = await response.json();
       const parts = data?.candidates?.[0]?.content?.parts;
@@ -79,7 +89,17 @@ Always provide clear, practical answers. Use proper code formatting when showing
         throw new Error("No response from AI model");
       }
 
-      return content;
+        return content;
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "GEMINI_QUOTA_EXCEEDED"
+        ) {
+          console.log("Retrying with OpenAI due to Gemini quota...");
+        } else {
+          throw error;
+        }
+      }
     }
 
     if (OPENAI_API_KEY) {
