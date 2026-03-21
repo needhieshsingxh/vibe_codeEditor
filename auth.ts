@@ -9,6 +9,29 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (!user || !account) return false;
       if (!user.email) return false;
 
+      try {
+        await db.$runCommandRaw({
+          delete: "Account",
+          deletes: [
+            {
+              q: {
+                $or: [
+                  { user_id: null },
+                  { user_id: { $exists: false } },
+                  { user_id: "" },
+                  { userId: null },
+                  { userId: { $exists: false } },
+                  { userId: "" },
+                ],
+              },
+              limit: 0,
+            },
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to clean malformed accounts", error);
+      }
+
       // PrismaAdapter handles user and account persistence for OAuth providers.
       return true;
     },
