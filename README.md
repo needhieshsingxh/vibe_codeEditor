@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vibe Code Editor
 
-## Getting Started
+A full-stack AI-assisted code playground built with Next.js, Monaco editor, WebContainers, and Prisma.
 
-First, run the development server:
+## What This Project Is
+
+Vibe Code Editor lets users create and manage playground projects, edit files in-browser, run project templates, and chat with an AI assistant while coding.
+
+## Features
+
+- Authentication with NextAuth (Google and GitHub providers)
+- Monaco-based in-browser code editing
+- File explorer with create, rename, and delete dialogs
+- AI chat sidebar integrated with provider fallback
+- Template-based playground creation (React, Next.js, Express, Vue, Hono, Angular)
+- Prisma + MongoDB persistence
+- Dashboard for managing and starring playgrounds
+
+## AI Provider Options
+
+The chat API uses providers in this order:
+
+1. Gemini (if `GEMINI_API_KEY` is set)
+2. OpenAI-compatible API (if `OPENAI_API_KEY` is set)
+3. Ollama (fallback for local model hosting)
+
+You can use only one provider or keep fallback providers configured.
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19 + TypeScript
+- Tailwind CSS
+- Prisma ORM
+- MongoDB Atlas
+- NextAuth v5 (beta)
+- Monaco Editor + WebContainers
+
+## Run Locally
+
+## 1) Prerequisites
+
+- Node.js 20+ recommended
+- npm (comes with Node.js)
+- MongoDB Atlas connection string
+- At least one AI provider key (Gemini recommended)
+
+## 2) Install Dependencies
+
+```bash
+npm install
+```
+
+## 3) Configure Environment Variables
+
+Create a local `.env` file in the project root and add values like this:
+
+```env
+DATABASE_URL="mongodb+srv://<user>:<password>@<cluster>/<db-name>"
+
+AUTH_SECRET="your-long-random-secret"
+AUTH_TRUST_HOST=true
+
+GITHUB_ID="your-github-oauth-client-id"
+GITHUB_SECRET="your-github-oauth-client-secret"
+
+GOOGLE_ID="your-google-oauth-client-id"
+GOOGLE_SECRET="your-google-oauth-client-secret"
+
+# Preferred AI provider
+GEMINI_API_KEY="your-gemini-api-key"
+# Optional (defaults to gemini-2.0-flash)
+GEMINI_MODEL="gemini-2.0-flash"
+
+# Optional OpenAI-compatible fallback
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4o-mini"
+OPENAI_BASE_URL="https://api.openai.com/v1"
+
+# Optional Ollama fallback (local)
+OLLAMA_BASE_URL="http://localhost:11434"
+OLLAMA_MODEL="codellama:latest"
+```
+
+## 4) Start Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 5) Build for Production (Optional Local Check)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - run app in development mode
+- `npm run build` - generate Prisma client and build Next.js app
+- `npm run start` - start production server
+- `npm run lint` - run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Screenshots
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Add your screenshots in this section.
 
-## Deploy on Vercel
+Example structure:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+public/screenshots/home.png
+public/screenshots/playground.png
+public/screenshots/ai-chat.png
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Markdown placeholders:
+
+```md
+![Home](public/screenshots/home.png)
+![Playground](public/screenshots/playground.png)
+![AI Chat](public/screenshots/ai-chat.png)
+```
+
+## Deployment
+
+This app is ready for Vercel deployment.
+
+Required env vars on Vercel:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_TRUST_HOST`
+- `GEMINI_API_KEY` (if using Gemini)
+- OAuth vars if auth providers are enabled (`GOOGLE_ID`, `GOOGLE_SECRET`, `GITHUB_ID`, `GITHUB_SECRET`)
+
+## Notes
+
+- Do not commit your `.env` file.
+- Rotate secrets immediately if they are ever exposed.
