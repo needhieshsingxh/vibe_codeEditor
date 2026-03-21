@@ -1,5 +1,3 @@
-import { db } from "@/lib/db";
-import { error } from "console";
 import { NextRequest, NextResponse } from "next/server";
 
 interface ChatMessage {
@@ -11,6 +9,15 @@ interface ChatRequest {
   message: string;
   history: ChatMessage[];
 }
+
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "codellama:latest";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_BASE_URL =
+  process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 async function generateAIResponse(messages: ChatMessage[]): Promise<string> {
   const systemPrompt = `You are a helpful AI coding assistant. You help developers with:
@@ -24,27 +31,109 @@ Always provide clear, practical answers. Use proper code formatting when showing
 
   const fullMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
-  const prompt = fullMessages
-    .map((msg) => `${msg.role}: ${msg.content}`)
-    .join("\n\n");
-
   try {
-    const response = await fetch("http://localhost:11434/api/generate", {
+    if (GEMINI_API_KEY) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemPrompt }],
+            },
+            contents: messages.map((msg) => ({
+              role: msg.role === "assistant" ? "model" : "user",
+              parts: [{ text: msg.content }],
+            })),
+            generationConfig: {
+              temperature: 0.7,
+              topP: 0.9,
+              maxOutputTokens: 1000,
+            },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`AI provider error (${response.status}): ${body}`);
+      }
+
+      const data = await response.json();
+      const parts = data?.candidates?.[0]?.content?.parts;
+      const content = Array.isArray(parts)
+        ? parts
+            .map((part) => (typeof part?.text === "string" ? part.text : ""))
+            .join("")
+            .trim()
+        : "";
+
+      if (!content) {
+        throw new Error("No response from AI model");
+      }
+
+      return content;
+    }
+
+    if (OPENAI_API_KEY) {
+      const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          messages: fullMessages,
+          temperature: 0.7,
+          max_tokens: 1000,
+          top_p: 0.9,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`AI provider error (${response.status}): ${body}`);
+      }
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+
+      if (!content || typeof content !== "string") {
+        throw new Error("No response from AI model");
+      }
+
+      return content.trim();
+    }
+
+    const prompt = fullMessages
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join("\n\n");
+
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "codellama:latest",
+        model: OLLAMA_MODEL,
         prompt: prompt,
         stream: false,
         options: {
-          temperature: 0.7, // Controls randomness (0-1)
-          max_tokens: 1000, // Maximum response length
-          top_p: 0.9, // controls diversity
+          temperature: 0.7,
+          max_tokens: 1000,
+          top_p: 0.9,
         },
       }),
     });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`AI provider error (${response.status}): ${body}`);
+    }
 
     const data = await response.json();
 
@@ -55,6 +144,14 @@ Always provide clear, practical answers. Use proper code formatting when showing
     return data.response.trim();
   } catch (error) {
     console.error("AI generation error:", error);
+    const message =
+      error instanceof Error ? error.message : "Unknown AI provider error";
+
+    // Keep chat UI functional when local model server is unavailable.
+    if (message.includes("ECONNREFUSED") || message.includes("fetch failed")) {
+      return "I couldn't reach the local AI model server at localhost:11434. Start Ollama and pull the selected model, then try again.\n\nQuick fix:\n1) Start Ollama\n2) Run: ollama pull codellama:latest\n3) Retry your chat request";
+    }
+
     throw new Error("Failed to generate AI response");
   }
 }
@@ -68,7 +165,7 @@ export async function POST(req: NextRequest) {
     if (!message || typeof message !== "string") {
       return NextResponse.json(
         { error: "Message is required and must be a string" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -80,7 +177,7 @@ export async function POST(req: NextRequest) {
             typeof msg === "object" &&
             typeof msg.role === "string" &&
             typeof msg.content === "string" &&
-            ["user", "assistant"].includes(msg.role)
+            ["user", "assistant"].includes(msg.role),
         )
       : [];
 
@@ -95,10 +192,15 @@ export async function POST(req: NextRequest) {
 
     const aiResponse = await generateAIResponse(messages);
 
-
+    const activeModel = GEMINI_API_KEY
+      ? GEMINI_MODEL
+      : OPENAI_API_KEY
+        ? OPENAI_MODEL
+        : OLLAMA_MODEL;
 
     return NextResponse.json({
       response: aiResponse,
+      model: activeModel,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -113,7 +215,7 @@ export async function POST(req: NextRequest) {
         details: errorMessage,
         timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

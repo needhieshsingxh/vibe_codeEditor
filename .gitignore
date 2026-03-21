@@ -40,6 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated artifacts
+/generated/prisma
+/extra/generated
+/output
+
 /lib/generated/prisma
 
 starters-main

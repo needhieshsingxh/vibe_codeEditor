@@ -7,7 +7,11 @@ import { Progress } from "@/components/ui/progress";
 
 import { WebContainer } from "@webcontainer/api";
 import { TemplateFolder } from "@/modules/playground/lib/path-to-json";
-import TerminalComponent from "./terminal";
+import dynamic from "next/dynamic";
+
+const TerminalComponent = dynamic(() => import("./terminal"), {
+  ssr: false,
+});
 
 interface WebContainerPreviewProps {
   templateData: TemplateFolder;
@@ -71,21 +75,21 @@ const WebContainerPreview = ({
         try {
           const packageJsonExists = await instance.fs.readFile(
             "package.json",
-            "utf8"
+            "utf8",
           );
 
           if (packageJsonExists) {
             // Files are already mounted, just reconnect to existing server
             if (terminalRef.current?.writeToTerminal) {
               terminalRef.current.writeToTerminal(
-                "🔄 Reconnecting to existing WebContainer session...\r\n"
+                "🔄 Reconnecting to existing WebContainer session...\r\n",
               );
             }
 
             instance.on("server-ready", (port: number, url: string) => {
               if (terminalRef.current?.writeToTerminal) {
                 terminalRef.current.writeToTerminal(
-                  `🌐 Reconnected to server at ${url}\r\n`
+                  `🌐 Reconnected to server at ${url}\r\n`,
                 );
               }
 
@@ -109,7 +113,7 @@ const WebContainerPreview = ({
         // Write to terminal
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            "🔄 Transforming template data...\r\n"
+            "🔄 Transforming template data...\r\n",
           );
         }
 
@@ -126,14 +130,14 @@ const WebContainerPreview = ({
 
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            "📁 Mounting files to WebContainer...\r\n"
+            "📁 Mounting files to WebContainer...\r\n",
           );
         }
         await instance.mount(files);
 
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            "✅ Files mounted successfully\r\n"
+            "✅ Files mounted successfully\r\n",
           );
         }
         setLoadingState((prev) => ({
@@ -147,7 +151,7 @@ const WebContainerPreview = ({
 
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            "📦 Installing dependencies...\r\n"
+            "📦 Installing dependencies...\r\n",
           );
         }
 
@@ -160,20 +164,20 @@ const WebContainerPreview = ({
                 terminalRef.current.writeToTerminal(data);
               }
             },
-          })
+          }),
         );
 
         const installExitCode = await installProcess.exit;
 
         if (installExitCode !== 0) {
           throw new Error(
-            `Failed to install dependencies. Exit code: ${installExitCode}`
+            `Failed to install dependencies. Exit code: ${installExitCode}`,
           );
         }
 
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            "✅ Dependencies installed successfully\r\n"
+            "✅ Dependencies installed successfully\r\n",
           );
         }
 
@@ -188,7 +192,7 @@ const WebContainerPreview = ({
 
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            "🚀 Starting development server...\r\n"
+            "🚀 Starting development server...\r\n",
           );
         }
 
@@ -197,7 +201,7 @@ const WebContainerPreview = ({
         instance.on("server-ready", (port: number, url: string) => {
           if (terminalRef.current?.writeToTerminal) {
             terminalRef.current.writeToTerminal(
-              `🌐 Server ready at ${url}\r\n`
+              `🌐 Server ready at ${url}\r\n`,
             );
           }
           setPreviewUrl(url);
@@ -218,7 +222,7 @@ const WebContainerPreview = ({
                 terminalRef.current.writeToTerminal(data);
               }
             },
-          })
+          }),
         );
       } catch (err) {
         console.error("Error setting up container:", err);
@@ -292,8 +296,8 @@ const WebContainerPreview = ({
           isComplete
             ? "text-green-600"
             : isActive
-            ? "text-blue-600"
-            : "text-gray-500"
+              ? "text-blue-600"
+              : "text-gray-500"
         }`}
       >
         {label}

@@ -1,10 +1,12 @@
-import { readTemplateStructureFromJson, saveTemplateStructureToJson } from "@/modules/playground/libs/path-to-json";
+import {
+  readTemplateStructureFromJson,
+  saveTemplateStructureToJson,
+} from "@/modules/playground/lib/path-to-json";
 import { db } from "@/lib/db";
 import { templatePaths } from "@/lib/template";
 import path from "path";
 import fs from "fs/promises";
 import { NextRequest } from "next/server";
-import { AArrowDown } from "lucide-react";
 
 // Helper function to ensure valid JSON
 function validateJsonStructure(data: unknown): boolean {
@@ -19,7 +21,7 @@ function validateJsonStructure(data: unknown): boolean {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const param = await params;
   const id = param.id;
@@ -56,18 +58,23 @@ export async function GET(
 
     // Validate the JSON structure before saving
     if (!validateJsonStructure(result.items)) {
-      return Response.json({ error: "Invalid JSON structure" }, { status: 500 });
+      return Response.json(
+        { error: "Invalid JSON structure" },
+        { status: 500 },
+      );
     }
-
-
 
     await fs.unlink(outputFile);
 
-    return Response.json({ success: true, templateJson: result }, { status: 200 });
+    return Response.json(
+      { success: true, templateJson: result },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error generating template JSON:", error);
-    return Response.json({ error: "Failed to generate template" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to generate template" },
+      { status: 500 },
+    );
   }
 }
-
-
