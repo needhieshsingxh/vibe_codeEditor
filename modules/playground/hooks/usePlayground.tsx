@@ -41,8 +41,14 @@ export const usePlayground = (id: string): UsePlaygroundReturn => {
       setPlaygroundData(data);
 
       const rawContent = data?.templateFiles?.[0]?.content;
+      if (rawContent && typeof rawContent === "object") {
+        setTemplateData(rawContent as TemplateFolder);
+        toast.success("Playground loaded successfully");
+        return;
+      }
+
       if (typeof rawContent === "string") {
-        const parsedContent = JSON.parse(rawContent);
+        const parsedContent = JSON.parse(rawContent) as TemplateFolder;
         setTemplateData(parsedContent);
         toast.success("Playground loaded successfully");
         return;
@@ -50,7 +56,12 @@ export const usePlayground = (id: string): UsePlaygroundReturn => {
 
       // Load template from API if not in saved content
       const res = await fetch(`/api/template/${id}`);
-      if (!res.ok) throw new Error(`Failed to load template: ${res.status}`);
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => null);
+        throw new Error(
+          errorJson?.error || `Failed to load template: ${res.status}`,
+        );
+      }
 
       const templateRes = await res.json();
       if (templateRes.templateJson && Array.isArray(templateRes.templateJson)) {
@@ -70,8 +81,10 @@ export const usePlayground = (id: string): UsePlaygroundReturn => {
       toast.success("Template loaded successfully");
     } catch (error) {
       console.error("Error loading playground:", error);
-      setError("Failed to load playground data");
-      toast.error("Failed to load playground data");
+      const message =
+        error instanceof Error ? error.message : "Failed to load playground data";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
