@@ -2,6 +2,24 @@ import Github from "next-auth/providers/github";
 
 import type { NextAuthConfig } from "next-auth";
 
+const requiredAuthEnv = [
+  "AUTH_SECRET",
+  "GITHUB_ID",
+  "GITHUB_SECRET",
+  "GOOGLE_ID",
+  "GOOGLE_SECRET",
+] as const;
+
+const missingAuthEnv = requiredAuthEnv.filter(
+  (key) => !process.env[key] || process.env[key]?.trim() === ""
+);
+
+if (missingAuthEnv.length > 0) {
+  console.error(
+    `[auth][config] Missing auth env vars: ${missingAuthEnv.join(", ")}`
+  );
+}
+
 export default {
   trustHost: true,
   providers: [
@@ -30,12 +48,14 @@ export default {
       userinfo: "https://openidconnect.googleapis.com/v1/userinfo",
       profile(profile) {
         return {
-          id: (profile as { sub?: string; id?: string }).sub ??
+          id:
+            (profile as { sub?: string; id?: string }).sub ??
             (profile as { sub?: string; id?: string }).id ??
             "",
           name: (profile as { name?: string }).name ?? null,
           email: (profile as { email?: string }).email ?? null,
-          image: (profile as { picture?: string; image?: string }).picture ??
+          image:
+            (profile as { picture?: string; image?: string }).picture ??
             (profile as { picture?: string; image?: string }).image ??
             null,
         };

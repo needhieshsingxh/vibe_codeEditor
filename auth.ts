@@ -4,6 +4,19 @@ import { db } from "./lib/db";
 import authConfig from "./auth.config";
 import { DEFAULT_LOGIN_REDIRECT } from "./route";
 
+const logAuthError = (scope: string, payload: unknown) => {
+  if (payload instanceof Error) {
+    console.error(`[auth][${scope}] ${payload.message}`, payload.stack);
+    return;
+  }
+
+  try {
+    console.error(`[auth][${scope}]`, JSON.stringify(payload, null, 2));
+  } catch {
+    console.error(`[auth][${scope}]`, payload);
+  }
+};
+
 export const { auth, handlers, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
@@ -73,5 +86,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
+  logger: {
+    error(code, ...message) {
+      logAuthError(`logger.error:${code}`, message);
+    },
+    warn(code) {
+      console.warn(`[auth][logger.warn] ${code}`);
+    },
+    debug(code, ...message) {
+      console.log(`[auth][logger.debug] ${code}`, ...message);
+    },
+  },
   ...authConfig,
 });

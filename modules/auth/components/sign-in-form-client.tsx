@@ -39,8 +39,8 @@ const SignInFormClient = () => {
           className="w-full"
           onClick={handleGoogleSignIn}
         >
-            <Chrome className="mr-2 h-4 w-4" />
-            <span>Sign in with google</span>
+          <Chrome className="mr-2 h-4 w-4" />
+          <span>Sign in with google</span>
         </Button>
         <Button
           type="button"
@@ -48,8 +48,8 @@ const SignInFormClient = () => {
           className="w-full"
           onClick={handleGithubSignIn}
         >
-            <Github className="mr-2 h-4 w-4" />
-            <span>Sign in with github</span>
+          <Github className="mr-2 h-4 w-4" />
+          <span>Sign in with github</span>
         </Button>
       </CardContent>
 
@@ -71,5 +71,3 @@ const SignInFormClient = () => {
 };
 
 export default SignInFormClient;
-
-
