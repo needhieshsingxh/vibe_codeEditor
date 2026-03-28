@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "./lib/db";
 import authConfig from "./auth.config";
+import { DEFAULT_LOGIN_REDIRECT } from "./route";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   callbacks: {
@@ -9,12 +10,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (!user || !account) return false;
       if (!user.email) return false;
 
+      // Clean malformed OAuth account rows left by older failed signup attempts.
+      // These rows can violate unique constraints and block first-time account linking.
       try {
         await db.$runCommandRaw({
           delete: "Account",
           deletes: [
             {
               q: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
                 $or: [
                   { user_id: null },
                   { user_id: { $exists: false } },
@@ -32,7 +37,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         console.error("Failed to clean malformed accounts", error);
       }
 
-      // PrismaAdapter handles user and account persistence for OAuth providers.
       return true;
     },
     async jwt({ token }) {
@@ -58,6 +62,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
 
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+
+      return `${baseUrl}${DEFAULT_LOGIN_REDIRECT}`;
     },
   },
   secret: process.env.AUTH_SECRET,
