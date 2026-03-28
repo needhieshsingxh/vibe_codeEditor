@@ -5,6 +5,7 @@ import type { NextAuthConfig } from "next-auth";
 
 const requiredAuthEnv = [
   "AUTH_SECRET",
+  "DATABASE_URL",
   "GITHUB_ID",
   "GITHUB_SECRET",
   "GOOGLE_ID",

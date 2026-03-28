@@ -57,26 +57,50 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
       return true;
     },
-    async jwt({ token }) {
-      if (!token.sub) return token;
-      const existingUser = await db.user.findUnique({
-        where: { id: token.sub },
-      });
-      if (!existingUser) return token;
+    async jwt({ token, user, trigger }) {
+      // Keep token populated even when DB reads fail during OAuth callback.
+      if (trigger === "signIn" && user) {
+        token.name = user.name;
+        token.email = user.email;
+      }
 
-      token.name = existingUser.name;
-      token.email = existingUser.email;
-      token.role = existingUser.role;
+      if (!token.sub) return token;
+
+      try {
+        const existingUser = await db.user.findUnique({
+          where: { id: token.sub },
+        });
+        if (!existingUser) return token;
+
+        token.name = existingUser.name;
+        token.email = existingUser.email;
+        token.role = existingUser.role;
+      } catch (error) {
+        logAuthPayload("callbacks.jwt.db", {
+          message: "Failed to fetch user in jwt callback",
+          tokenSub: token.sub,
+          trigger,
+          error,
+        });
+      }
 
       return token;
     },
     async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
-      }
+      try {
+        if (token.sub && session.user) {
+          session.user.id = token.sub;
+        }
 
-      if (token.sub && session.user) {
-        session.user.role = token.role;
+        if (session.user) {
+          session.user.role = token.role;
+        }
+      } catch (error) {
+        logAuthPayload("callbacks.session", {
+          message: "Failed to shape session",
+          tokenSub: token.sub,
+          error,
+        });
       }
 
       return session;
