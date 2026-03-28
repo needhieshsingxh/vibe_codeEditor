@@ -1,8 +1,9 @@
 import { handlers } from "@/auth";
+import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
-const logRouteError = (method: string, req: Request, error: unknown) => {
+const logRouteError = (method: string, req: NextRequest, error: unknown) => {
   const url = new URL(req.url);
   const query = Object.fromEntries(url.searchParams.entries());
 
@@ -23,7 +24,7 @@ const logRouteError = (method: string, req: Request, error: unknown) => {
   });
 };
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     return await handlers.GET(req);
   } catch (error) {
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     return await handlers.POST(req);
   } catch (error) {
