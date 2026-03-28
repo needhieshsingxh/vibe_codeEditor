@@ -23,6 +23,7 @@ const logAuthPayload = (scope: string, payload: unknown) => {
 };
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  debug: true,
   callbacks: {
     async signIn({ user, account }) {
       if (!user || !account) return false;
