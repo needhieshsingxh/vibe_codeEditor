@@ -1,4 +1,5 @@
 import Github from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
 
 import type { NextAuthConfig } from "next-auth";
 
@@ -28,38 +29,10 @@ export default {
       clientSecret: process.env.GITHUB_SECRET,
       allowDangerousEmailAccountLinking: true,
     }),
-    {
-      id: "google",
-      name: "Google",
-      type: "oauth",
+    Google({
       clientId: process.env.GOOGLE_ID,
       clientSecret: process.env.GOOGLE_SECRET,
       allowDangerousEmailAccountLinking: true,
-      authorization: {
-        url: "https://accounts.google.com/o/oauth2/v2/auth",
-        params: {
-          scope: "openid profile email",
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
-      token: "https://oauth2.googleapis.com/token",
-      userinfo: "https://openidconnect.googleapis.com/v1/userinfo",
-      profile(profile) {
-        return {
-          id:
-            (profile as { sub?: string; id?: string }).sub ??
-            (profile as { sub?: string; id?: string }).id ??
-            "",
-          name: (profile as { name?: string }).name ?? null,
-          email: (profile as { email?: string }).email ?? null,
-          image:
-            (profile as { picture?: string; image?: string }).picture ??
-            (profile as { picture?: string; image?: string }).image ??
-            null,
-        };
-      },
-    },
+    }),
   ],
 } satisfies NextAuthConfig;

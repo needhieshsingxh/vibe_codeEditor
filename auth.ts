@@ -4,9 +4,14 @@ import { db } from "./lib/db";
 import authConfig from "./auth.config";
 import { DEFAULT_LOGIN_REDIRECT } from "./route";
 
-const logAuthError = (scope: string, payload: unknown) => {
+const logAuthPayload = (scope: string, payload: unknown) => {
   if (payload instanceof Error) {
     console.error(`[auth][${scope}] ${payload.message}`, payload.stack);
+    return;
+  }
+
+  if (Array.isArray(payload)) {
+    console.error(`[auth][${scope}]`, ...payload);
     return;
   }
 
@@ -87,14 +92,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
   logger: {
-    error(code, ...message) {
-      logAuthError(`logger.error:${code}`, message);
+    error(...args) {
+      logAuthPayload("logger.error.raw", args);
     },
-    warn(code) {
-      console.warn(`[auth][logger.warn] ${code}`);
+    warn(...args) {
+      logAuthPayload("logger.warn.raw", args);
     },
-    debug(code, ...message) {
-      console.log(`[auth][logger.debug] ${code}`, ...message);
+    debug(...args) {
+      logAuthPayload("logger.debug.raw", args);
     },
   },
   ...authConfig,
