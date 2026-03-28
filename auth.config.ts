@@ -11,12 +11,12 @@ const requiredAuthEnv = [
 ] as const;
 
 const missingAuthEnv = requiredAuthEnv.filter(
-  (key) => !process.env[key] || process.env[key]?.trim() === ""
+  (key) => !process.env[key] || process.env[key]?.trim() === "",
 );
 
 if (missingAuthEnv.length > 0) {
   console.error(
-    `[auth][config] Missing auth env vars: ${missingAuthEnv.join(", ")}`
+    `[auth][config] Missing auth env vars: ${missingAuthEnv.join(", ")}`,
   );
 }
 
