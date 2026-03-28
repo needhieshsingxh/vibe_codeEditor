@@ -4,26 +4,37 @@ import { db } from "./lib/db";
 import authConfig from "./auth.config";
 import { DEFAULT_LOGIN_REDIRECT } from "./route";
 
-const logAuthPayload = (scope: string, payload: unknown) => {
+const logAuthPayload = (
+  level: "error" | "warn" | "info",
+  scope: string,
+  payload: unknown,
+) => {
+  const write =
+    level === "error"
+      ? console.error
+      : level === "warn"
+        ? console.warn
+        : console.log;
+
   if (payload instanceof Error) {
-    console.error(`[auth][${scope}] ${payload.message}`, payload.stack);
+    write(`[auth][${scope}] ${payload.message}`, payload.stack);
     return;
   }
 
   if (Array.isArray(payload)) {
-    console.error(`[auth][${scope}]`, ...payload);
+    write(`[auth][${scope}]`, ...payload);
     return;
   }
 
   try {
-    console.error(`[auth][${scope}]`, JSON.stringify(payload, null, 2));
+    write(`[auth][${scope}]`, JSON.stringify(payload, null, 2));
   } catch {
-    console.error(`[auth][${scope}]`, payload);
+    write(`[auth][${scope}]`, payload);
   }
 };
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
-  debug: true,
+  debug: process.env.NODE_ENV !== "production",
   callbacks: {
     async signIn({ user, account }) {
       if (!user || !account) return false;
@@ -77,7 +88,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         token.email = existingUser.email;
         token.role = existingUser.role;
       } catch (error) {
-        logAuthPayload("callbacks.jwt.db", {
+        logAuthPayload("error", "callbacks.jwt.db", {
           message: "Failed to fetch user in jwt callback",
           tokenSub: token.sub,
           trigger,
@@ -97,7 +108,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           session.user.role = token.role;
         }
       } catch (error) {
-        logAuthPayload("callbacks.session", {
+        logAuthPayload("error", "callbacks.session", {
           message: "Failed to shape session",
           tokenSub: token.sub,
           error,
@@ -118,13 +129,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   logger: {
     error(...args) {
-      logAuthPayload("logger.error.raw", args);
+      logAuthPayload("error", "logger.error.raw", args);
     },
     warn(...args) {
-      logAuthPayload("logger.warn.raw", args);
+      logAuthPayload("warn", "logger.warn.raw", args);
     },
     debug(...args) {
-      logAuthPayload("logger.debug.raw", args);
+      logAuthPayload("info", "logger.debug.raw", args);
     },
   },
   ...authConfig,
