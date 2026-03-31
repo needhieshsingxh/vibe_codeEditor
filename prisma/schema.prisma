@@ -15,13 +15,14 @@ enum UserRole {
 }
 
 model User {
-  id       String    @id @default(cuid()) @map("_id")
-  name     String?
-  email    String    @unique
-  image    String?
-  emailVerified DateTime?   
-  accounts Account[]
-  role     UserRole  @default(USER)
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String    @unique
+  image         String?
+  emailVerified DateTime?
+  accounts      Account[]
+  sessions      Session[]
+  role          UserRole  @default(USER)
 
   myPlaground Playground[]
   staredPlayground StarMark[]
@@ -32,23 +33,43 @@ model User {
 }
 
 model Account {
-  id                String  @id @default(cuid()) @map("_id")
-  userId            String  @map("user_id")
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
   type              String
   provider          String
   providerAccountId String
-  refreshToken      String? @map("refresh_token")
-  accessToken       String? @map("access_token")
-  expiresAt         Int?    @map("expires_at")
-  tokenType         String? @map("token_type")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
   scope             String?
-  idToken           String? @map("id_token")
-  sessionState      String? @map("session_state")
+  id_token          String?
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 enum Templates {
@@ -60,7 +81,7 @@ enum Templates {
   ANGULAR
 }
 model Playground {
-  id  String @id @default(cuid()) @map("_id")
+  id  String @id @default(auto()) @map("_id") @db.ObjectId
   title  String
   description String?
   template   Templates  @default(REACT)
@@ -68,7 +89,7 @@ model Playground {
   updatedAt  DateTime @updatedAt
  
  Starmark   StarMark[]
-  userId  String
+  userId  String @db.ObjectId
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   templateFiles TemplateFile[]
@@ -76,9 +97,9 @@ model Playground {
 
 
 model StarMark {
-  id  String @id @default(cuid()) @map("_id")
-  userId String
-  playgroundId String
+  id  String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  playgroundId String @db.ObjectId
   isMarked  Boolean
   createdAt  DateTime  @default(now())
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -88,18 +109,18 @@ model StarMark {
 }
 
 model TemplateFile {
-  id  String @id @default(cuid()) @map("_id")
+  id  String @id @default(auto()) @map("_id") @db.ObjectId
   content Json
   createdAt  DateTime  @default(now())
   updatedAt  DateTime @updatedAt
-  playgroundId String @unique
+  playgroundId String @unique @db.ObjectId
   playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
 }
 
 
 model ChatMessage {
-  id  String @id @default(cuid()) @map("_id")
-  userId String 
+  id  String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
   role   String  // "user" or "assitant"
   content String
   createdAt DateTime  @default(now())
