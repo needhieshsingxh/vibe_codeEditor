@@ -15,6 +15,36 @@ interface UseWebContaierReturn {
   destory: () => void;
 }
 
+// Singleton to manage WebContainer instances globally
+let bootPromise: Promise<WebContainer> | null = null;
+let webcontainerInstance: WebContainer | null = null;
+let bootErrorMessage: string | null = null;
+
+const getWebContainerInstance = async (): Promise<WebContainer> => {
+  // If already booted, return existing instance
+  if (webcontainerInstance) {
+    return webcontainerInstance;
+  }
+
+  // If boot is in progress, wait for it
+  if (bootPromise) {
+    return bootPromise;
+  }
+
+  // Start boot process
+  bootPromise = WebContainer.boot().then((instance) => {
+    webcontainerInstance = instance;
+    bootErrorMessage = null;
+    return instance;
+  }).catch((error) => {
+    bootErrorMessage = error instanceof Error ? error.message : "Failed to boot WebContainer";
+    bootPromise = null; // Reset to allow retry
+    throw error;
+  });
+
+  return bootPromise;
+};
+
 export const useWebContainer = ({
   templateData,
 }: UseWebContainerProps): UseWebContaierReturn => {
@@ -28,11 +58,11 @@ export const useWebContainer = ({
 
     async function initializeWebContainer() {
       try {
-        const webcontainerInstance = await WebContainer.boot();
+        const containerInstance = await getWebContainerInstance();
 
         if (!mounted) return;
 
-        setInstance(webcontainerInstance);
+        setInstance(containerInstance);
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to initialize WebContainer:", error);
@@ -51,9 +81,7 @@ export const useWebContainer = ({
 
     return () => {
       mounted = false;
-      if (instance) {
-        instance.teardown();
-      }
+      // Don't teardown on unmount - instance is global
     };
   }, []);
 
@@ -83,12 +111,11 @@ export const useWebContainer = ({
   );
 
   const destory = useCallback(()=>{
-    if(instance){
-        instance.teardown()
-        setInstance(null);
-        setServerUrl(null)
-    }
-  },[instance])
+    // Clear local state but don't teardown the global instance
+    setInstance(null);
+    setServerUrl(null)
+    setIsLoading(true);
+  },[])
 
   return {serverUrl , isLoading , error , instance , writeFileSync , destory}
 };
