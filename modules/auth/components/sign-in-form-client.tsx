@@ -13,11 +13,11 @@ import { Chrome, Github } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 const handleGoogleSignIn = async () => {
-  await signIn("google", { callbackUrl: "/" });
+  await signIn("google", { callbackUrl: "/dashboard" });
 };
 
 const handleGithubSignIn = async () => {
-  await signIn("github", { callbackUrl: "/" });
+  await signIn("github", { callbackUrl: "/dashboard" });
 };
 
 const SignInFormClient = () => {

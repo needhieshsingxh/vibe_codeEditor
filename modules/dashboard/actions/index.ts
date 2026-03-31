@@ -97,6 +97,7 @@ export const createPlayground = async (data: {
         userId: user.id,
       },
     });
+    revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard", "layout");
     return {
@@ -121,6 +122,7 @@ export const deleteProjectById = async (id: string) => {
         id,
       },
     });
+    revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard", "layout");
   } catch (error) {
@@ -142,6 +144,7 @@ export const editProjectById = async (
         description: data.description,
       },
     });
+    revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard", "layout");
   } catch (error) {
@@ -167,6 +170,7 @@ export const duplicateProjectById = async (id: string) => {
         //todo: add template
       },
     });
+    revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard", "layout");
     return duplicatedPlayground;

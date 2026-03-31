@@ -71,6 +71,7 @@ const WebContainerPreview = ({
   const [setupError, setSetupError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [isSetupInProgress, setIsSetupInProgress] = useState(false);
+  const serverReadyListenerAttached = useRef(false);
 
   const terminalRef = useRef<any>(null);
 
@@ -113,20 +114,23 @@ const WebContainerPreview = ({
               );
             }
 
-            instance.on("server-ready", (port: number, url: string) => {
-              if (terminalRef.current?.writeToTerminal) {
-                terminalRef.current.writeToTerminal(
-                  `🌐 Reconnected to server at ${url}\r\n`,
-                );
-              }
+            if (!serverReadyListenerAttached.current) {
+              serverReadyListenerAttached.current = true;
+              instance.on("server-ready", (port: number, url: string) => {
+                if (terminalRef.current?.writeToTerminal) {
+                  terminalRef.current.writeToTerminal(
+                    `🌐 Reconnected to server at ${url}\r\n`,
+                  );
+                }
 
-              setPreviewUrl(url);
-              setLoadingState((prev) => ({
-                ...prev,
-                starting: false,
-                ready: true,
-              }));
-            });
+                setPreviewUrl(url);
+                setLoadingState((prev) => ({
+                  ...prev,
+                  starting: false,
+                  ready: true,
+                }));
+              });
+            }
 
             setCurrentStep(4);
             setLoadingState((prev) => ({ ...prev, starting: true }));
@@ -264,23 +268,45 @@ const WebContainerPreview = ({
           );
         }
 
-        const startProcess = await instance.spawn("npm", ["run", "start"]);
-
-        instance.on("server-ready", (port: number, url: string) => {
-          if (terminalRef.current?.writeToTerminal) {
-            terminalRef.current.writeToTerminal(
-              `🌐 Server ready at ${url}\r\n`,
-            );
+        let startScript: "dev" | "start" = "start";
+        try {
+          const pkgRaw = await instance.fs.readFile("package.json", "utf8");
+          const pkg = JSON.parse(pkgRaw) as {
+            scripts?: Record<string, string>;
+          };
+          if (pkg.scripts?.dev) {
+            startScript = "dev";
           }
-          setPreviewUrl(url);
-          setLoadingState((prev) => ({
-            ...prev,
-            starting: false,
-            ready: true,
-          }));
-          setIsSetupComplete(true);
-          setIsSetupInProgress(false);
-        });
+        } catch {
+          startScript = "start";
+        }
+
+        if (terminalRef.current?.writeToTerminal) {
+          terminalRef.current.writeToTerminal(
+            `▶ npm run ${startScript}\r\n`,
+          );
+        }
+
+        const startProcess = await instance.spawn("npm", ["run", startScript]);
+
+        if (!serverReadyListenerAttached.current) {
+          serverReadyListenerAttached.current = true;
+          instance.on("server-ready", (port: number, url: string) => {
+            if (terminalRef.current?.writeToTerminal) {
+              terminalRef.current.writeToTerminal(
+                `🌐 Server ready at ${url}\r\n`,
+              );
+            }
+            setPreviewUrl(url);
+            setLoadingState((prev) => ({
+              ...prev,
+              starting: false,
+              ready: true,
+            }));
+            setIsSetupComplete(true);
+            setIsSetupInProgress(false);
+          });
+        }
 
         // Handle start process output - stream to terminal
         startProcess.output.pipeTo(
