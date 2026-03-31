@@ -32,15 +32,18 @@ const getWebContainerInstance = async (): Promise<WebContainer> => {
   }
 
   // Start boot process
-  bootPromise = WebContainer.boot().then((instance) => {
-    webcontainerInstance = instance;
-    bootErrorMessage = null;
-    return instance;
-  }).catch((error) => {
-    bootErrorMessage = error instanceof Error ? error.message : "Failed to boot WebContainer";
-    bootPromise = null; // Reset to allow retry
-    throw error;
-  });
+  bootPromise = WebContainer.boot()
+    .then((instance) => {
+      webcontainerInstance = instance;
+      bootErrorMessage = null;
+      return instance;
+    })
+    .catch((error) => {
+      bootErrorMessage =
+        error instanceof Error ? error.message : "Failed to boot WebContainer";
+      bootPromise = null; // Reset to allow retry
+      throw error;
+    });
 
   return bootPromise;
 };
@@ -70,7 +73,7 @@ export const useWebContainer = ({
           setError(
             error instanceof Error
               ? error.message
-              : "Failed to initialize WebContainer"
+              : "Failed to initialize WebContainer",
           );
           setIsLoading(false);
         }
@@ -96,7 +99,7 @@ export const useWebContainer = ({
         const folderPath = pathParts.slice(0, -1).join("/");
 
         if (folderPath) {
-          await instance.fs.mkdir(folderPath, { recursive: true }); 
+          await instance.fs.mkdir(folderPath, { recursive: true });
         }
 
         await instance.fs.writeFile(path, content);
@@ -107,15 +110,15 @@ export const useWebContainer = ({
         throw new Error(`Failed to write file at ${path}: ${errorMessage}`);
       }
     },
-    [instance]
+    [instance],
   );
 
-  const destory = useCallback(()=>{
+  const destory = useCallback(() => {
     // Clear local state but don't teardown the global instance
     setInstance(null);
-    setServerUrl(null)
+    setServerUrl(null);
     setIsLoading(true);
-  },[])
+  }, []);
 
-  return {serverUrl , isLoading , error , instance , writeFileSync , destory}
+  return { serverUrl, isLoading, error, instance, writeFileSync, destory };
 };
