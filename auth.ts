@@ -1,142 +1,119 @@
-import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+import NextAuth from "next-auth"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+
+import authConfig from "./auth.config"
 import { db } from "./lib/db";
-import authConfig from "./auth.config";
-import { DEFAULT_LOGIN_REDIRECT } from "./route";
+import { getAccountByUserId, getUserById } from "@/modules/auth/actions";
 
-const logAuthPayload = (
-  level: "error" | "warn" | "info",
-  scope: string,
-  payload: unknown,
-) => {
-  const write =
-    level === "error"
-      ? console.error
-      : level === "warn"
-        ? console.warn
-        : console.log;
+ 
 
-  if (payload instanceof Error) {
-    write(`[auth][${scope}] ${payload.message}`, payload.stack);
-    return;
-  }
-
-  if (Array.isArray(payload)) {
-    write(`[auth][${scope}]`, ...payload);
-    return;
-  }
-
-  try {
-    write(`[auth][${scope}]`, JSON.stringify(payload, null, 2));
-  } catch {
-    write(`[auth][${scope}]`, payload);
-  }
-};
-
+ 
 export const { auth, handlers, signIn, signOut } = NextAuth({
-  debug: process.env.NODE_ENV !== "production",
   callbacks: {
-    async signIn({ user, account }) {
+    /**
+     * Handle user creation and account linking after a successful sign-in
+     */
+    async signIn({ user, account, profile }) {
       if (!user || !account) return false;
-      if (!user.email) return false;
 
-      // Clean malformed OAuth account rows left by older failed signup attempts.
-      // These rows can violate unique constraints and block first-time account linking.
-      try {
-        await db.$runCommandRaw({
-          delete: "Account",
-          deletes: [
-            {
-              q: {
+      // Check if the user already exists
+      const existingUser = await db.user.findUnique({
+        where: { email: user.email! },
+      });
+
+      // If user does not exist, create a new one
+      if (!existingUser) {
+        const newUser = await db.user.create({
+          data: {
+            email: user.email!,
+            name: user.name,
+            image: user.image,
+           
+            accounts: {
+              // @ts-ignore
+              create: {
+                type: account.type,
                 provider: account.provider,
                 providerAccountId: account.providerAccountId,
-                $or: [
-                  { user_id: null },
-                  { user_id: { $exists: false } },
-                  { user_id: "" },
-                  { userId: null },
-                  { userId: { $exists: false } },
-                  { userId: "" },
-                ],
+                refreshToken: account.refresh_token,
+                accessToken: account.access_token,
+                expiresAt: account.expires_at,
+                tokenType: account.token_type,
+                scope: account.scope,
+                idToken: account.id_token,
+                sessionState: account.session_state,
               },
-              limit: 0,
             },
-          ],
+          },
         });
-      } catch (error) {
-        console.error("Failed to clean malformed accounts", error);
+
+        if (!newUser) return false; // Return false if user creation fails
+      } else {
+        // Link the account if user exists
+        const existingAccount = await db.account.findUnique({
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          },
+        });
+
+        // If the account does not exist, create it
+        if (!existingAccount) {
+          await db.account.create({
+            data: {
+              userId: existingUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              refreshToken: account.refresh_token,
+              accessToken: account.access_token,
+              expiresAt: account.expires_at,
+              tokenType: account.token_type,
+              scope: account.scope,
+              idToken: account.id_token,
+              // @ts-ignore
+              sessionState: account.session_state,
+            },
+          });
+        }
       }
 
       return true;
     },
-    async jwt({ token, user, trigger }) {
-      // Keep token populated even when DB reads fail during OAuth callback.
-      if (trigger === "signIn" && user) {
-        token.name = user.name;
-        token.email = user.email;
-      }
 
-      if (!token.sub) return token;
+    async jwt({ token, user, account }) {
+      if(!token.sub) return token;
+      const existingUser = await getUserById(token.sub)
 
-      try {
-        const existingUser = await db.user.findUnique({
-          where: { id: token.sub },
-        });
-        if (!existingUser) return token;
+      if(!existingUser) return token;
 
-        token.name = existingUser.name;
-        token.email = existingUser.email;
-        token.role = existingUser.role;
-      } catch (error) {
-        logAuthPayload("error", "callbacks.jwt.db", {
-          message: "Failed to fetch user in jwt callback",
-          tokenSub: token.sub,
-          trigger,
-          error,
-        });
-      }
+      const exisitingAccount = await getAccountByUserId(existingUser.id);
+
+      token.name = existingUser.name;
+      token.email = existingUser.email;
+      token.role = existingUser.role;
 
       return token;
     },
+
     async session({ session, token }) {
-      try {
-        if (token.sub && session.user) {
-          session.user.id = token.sub;
-        }
+      // Attach the user ID from the token to the session
+    if(token.sub  && session.user){
+      session.user.id = token.sub
+    } 
 
-        if (session.user) {
-          session.user.role = token.role;
-        }
-      } catch (error) {
-        logAuthPayload("error", "callbacks.session", {
-          message: "Failed to shape session",
-          tokenSub: token.sub,
-          error,
-        });
-      }
+    if(token.sub && session.user){
+      session.user.role = token.role
+    }
 
-      return session;
-    },
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
-
-      return `${baseUrl}${DEFAULT_LOGIN_REDIRECT}`;
+    return session;
     },
   },
+  
   secret: process.env.AUTH_SECRET,
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
-  logger: {
-    error(...args) {
-      logAuthPayload("error", "logger.error.raw", args);
-    },
-    warn(...args) {
-      logAuthPayload("warn", "logger.warn.raw", args);
-    },
-    debug(...args) {
-      logAuthPayload("info", "logger.debug.raw", args);
-    },
-  },
   ...authConfig,
-});
+})

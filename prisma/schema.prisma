@@ -19,6 +19,7 @@ model User {
   name     String?
   email    String    @unique
   image    String?
+  emailVerified DateTime?   
   accounts Account[]
   role     UserRole  @default(USER)
 
