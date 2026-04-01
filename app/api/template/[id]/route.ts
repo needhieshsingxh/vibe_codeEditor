@@ -155,8 +155,7 @@ const fallbackTemplates: Record<string, TemplateFolder> = {
       {
         filename: "main",
         fileExtension: "ts",
-        content:
-          'console.log("Hello Angular fallback");\n',
+        content: 'console.log("Hello Angular fallback");\n',
       },
     ],
   },
