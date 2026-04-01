@@ -15,6 +15,366 @@ const TerminalComponent = dynamic(() => import("./terminal"), {
 
 const INSTALL_TIMEOUT_MS = 180000;
 
+const readFileIfExists = async (
+  instance: WebContainer,
+  filePath: string,
+): Promise<string | null> => {
+  try {
+    return await instance.fs.readFile(filePath, "utf8");
+  } catch {
+    return null;
+  }
+};
+
+const toContainerPath = (cwd: string, fileName: string): string => {
+  return cwd === "." ? fileName : `${cwd}/${fileName}`;
+};
+
+type TemplateKind =
+  | "hono"
+  | "nextjs"
+  | "react"
+  | "vue"
+  | "express"
+  | "angular"
+  | "generic";
+
+const detectTemplateKind = (templateData: TemplateFolder): TemplateKind => {
+  const stack = [...templateData.items];
+  let hasHonoImport = false;
+  let hasNextPage = false;
+  let hasReact = false;
+  let hasVue = false;
+  let hasExpress = false;
+  let hasAngular = false;
+
+  while (stack.length > 0) {
+    const item = stack.pop();
+    if (!item) continue;
+
+    if ("items" in item && Array.isArray(item.items)) {
+      stack.push(...item.items);
+      continue;
+    }
+
+    if (!("fileExtension" in item) || !("content" in item)) {
+      continue;
+    }
+
+    if (
+      item.fileExtension === "ts" &&
+      /from\s+["']hono["']/.test(item.content)
+    ) {
+      hasHonoImport = true;
+    }
+
+    if (
+      item.fileExtension === "tsx" &&
+      (item.filename === "page" || /next\//.test(item.content))
+    ) {
+      hasNextPage = true;
+    }
+
+    if (
+      ["jsx", "tsx"].includes(item.fileExtension) &&
+      /react/.test(item.content)
+    ) {
+      hasReact = true;
+    }
+
+    if (item.fileExtension === "vue") {
+      hasVue = true;
+    }
+
+    if (/express/.test(item.content)) {
+      hasExpress = true;
+    }
+
+    if (/angular/i.test(item.content)) {
+      hasAngular = true;
+    }
+  }
+
+  if (hasHonoImport) return "hono";
+  if (hasNextPage) return "nextjs";
+  if (hasVue) return "vue";
+  if (hasExpress) return "express";
+  if (hasReact) return "react";
+  if (hasAngular) return "angular";
+  return "generic";
+};
+
+const inferFallbackPackage = (kind: TemplateKind): string => {
+  if (kind === "hono") {
+    return JSON.stringify(
+      {
+        name: "hono-playground",
+        private: true,
+        type: "module",
+        scripts: {
+          dev: "tsx server.ts",
+          start: "tsx server.ts",
+        },
+        dependencies: {
+          "@hono/node-server": "^1.14.0",
+          hono: "^4.9.1",
+          tsx: "^4.20.6",
+          typescript: "^5.9.3",
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (kind === "nextjs") {
+    return JSON.stringify(
+      {
+        name: "nextjs-playground",
+        private: true,
+        scripts: {
+          dev: "next dev",
+          start: "next dev",
+          build: "next build",
+        },
+        dependencies: {
+          next: "16.1.6",
+          react: "19.2.3",
+          "react-dom": "19.2.3",
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (kind === "react") {
+    return JSON.stringify(
+      {
+        name: "react-playground",
+        private: true,
+        scripts: {
+          dev: "vite",
+          start: "vite",
+          build: "vite build",
+        },
+        dependencies: {
+          react: "^19.0.0",
+          "react-dom": "^19.0.0",
+        },
+        devDependencies: {
+          vite: "^7.0.0",
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (kind === "vue") {
+    return JSON.stringify(
+      {
+        name: "vue-playground",
+        private: true,
+        scripts: {
+          dev: "vite",
+          start: "vite",
+          build: "vite build",
+        },
+        dependencies: {
+          vue: "^3.5.0",
+        },
+        devDependencies: {
+          vite: "^7.0.0",
+          "@vitejs/plugin-vue": "^6.0.0",
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (kind === "express") {
+    return JSON.stringify(
+      {
+        name: "express-playground",
+        private: true,
+        scripts: {
+          dev: "node index.js",
+          start: "node index.js",
+        },
+        dependencies: {
+          express: "^4.21.2",
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (kind === "angular") {
+    return JSON.stringify(
+      {
+        name: "angular-fallback",
+        private: true,
+        scripts: {
+          dev: "node server.js",
+          start: "node server.js",
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  return JSON.stringify(
+    {
+      name: "playground-app",
+      private: true,
+      scripts: {
+        dev: "node index.js",
+        start: "node index.js",
+      },
+    },
+    null,
+    2,
+  );
+};
+
+const ensureParentDir = async (
+  instance: WebContainer,
+  filePath: string,
+): Promise<void> => {
+  const segments = filePath.split("/");
+  if (segments.length <= 1) return;
+  const dirPath = segments.slice(0, -1).join("/");
+  if (!dirPath) return;
+  await instance.fs.mkdir(dirPath, { recursive: true });
+};
+
+const writeFileIfMissing = async (
+  instance: WebContainer,
+  filePath: string,
+  content: string,
+): Promise<void> => {
+  const exists = await readFileIfExists(instance, filePath);
+  if (exists) return;
+  await ensureParentDir(instance, filePath);
+  await instance.fs.writeFile(filePath, content);
+};
+
+const scaffoldFallbackFiles = async (
+  instance: WebContainer,
+  projectRoot: string,
+  kind: TemplateKind,
+): Promise<void> => {
+  if (kind === "hono") {
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "server.ts"),
+      'import { serve } from "@hono/node-server";\nimport app from "./index";\n\nserve({\n  fetch: app.fetch,\n  port: 3000,\n});\n',
+    );
+    return;
+  }
+
+  if (kind === "nextjs") {
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "app/page.tsx"),
+      'export default function Page() {\n  return <h1>Hello Next.js</h1>;\n}\n',
+    );
+    return;
+  }
+
+  if (kind === "react") {
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "index.html"),
+      '<!doctype html>\n<html>\n  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>React Playground</title></head>\n  <body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>\n</html>\n',
+    );
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "src/main.jsx"),
+      'import React from "react";\nimport ReactDOM from "react-dom/client";\n\nReactDOM.createRoot(document.getElementById("root")).render(<h1>Hello React</h1>);\n',
+    );
+    return;
+  }
+
+  if (kind === "vue") {
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "index.html"),
+      '<!doctype html>\n<html>\n  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Vue Playground</title></head>\n  <body><div id="app"></div><script type="module" src="/src/main.js"></script></body>\n</html>\n',
+    );
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "src/main.js"),
+      'import { createApp } from "vue";\nimport App from "./App.vue";\n\ncreateApp(App).mount("#app");\n',
+    );
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "src/App.vue"),
+      '<template><h1>Hello Vue</h1></template>\n',
+    );
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "vite.config.js"),
+      'import { defineConfig } from "vite";\nimport vue from "@vitejs/plugin-vue";\n\nexport default defineConfig({ plugins: [vue()] });\n',
+    );
+    return;
+  }
+
+  if (kind === "express") {
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "index.js"),
+      'const express = require("express");\nconst app = express();\napp.get("/", (_req, res) => res.send("Hello Express"));\napp.listen(3000);\n',
+    );
+    return;
+  }
+
+  if (kind === "angular") {
+    await writeFileIfMissing(
+      instance,
+      toContainerPath(projectRoot, "server.js"),
+      'const http = require("http");\nconst html = "<!doctype html><html><body><h1>Hello Angular Fallback</h1></body></html>";\nhttp.createServer((_req, res) => {\n  res.writeHead(200, { "Content-Type": "text/html" });\n  res.end(html);\n}).listen(3000);\n',
+    );
+    return;
+  }
+
+  await writeFileIfMissing(
+    instance,
+    toContainerPath(projectRoot, "index.js"),
+    'const http = require("http");\nhttp.createServer((_req, res) => res.end("Hello Playground"))\n  .listen(3000);\n',
+  );
+};
+
+const resolveProjectRoot = async (instance: WebContainer): Promise<string> => {
+  const rootPackage = await readFileIfExists(instance, "package.json");
+  if (rootPackage) {
+    return ".";
+  }
+
+  const entries = await instance.fs.readdir(".", { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const nestedPackage = await readFileIfExists(
+      instance,
+      `${entry.name}/package.json`,
+    );
+    if (nestedPackage) {
+      return entry.name;
+    }
+  }
+
+  if (entries.length === 1 && entries[0].isDirectory()) {
+    return entries[0].name;
+  }
+
+  return ".";
+};
+
 async function waitForProcessExitWithTimeout(
   processExit: Promise<number>,
   timeoutMs: number,
@@ -171,6 +531,29 @@ const WebContainerPreview = ({
             "✅ Files mounted successfully\r\n",
           );
         }
+
+        const projectRoot = await resolveProjectRoot(instance);
+        const packageJsonPath = toContainerPath(projectRoot, "package.json");
+        const packageLockPath = toContainerPath(projectRoot, "package-lock.json");
+
+        const existingPackageJson = await readFileIfExists(
+          instance,
+          packageJsonPath,
+        );
+
+        if (!existingPackageJson) {
+          const detectedKind = detectTemplateKind(templateData);
+          const fallbackPackageJson = inferFallbackPackage(detectedKind);
+          await instance.fs.writeFile(packageJsonPath, fallbackPackageJson);
+          await scaffoldFallbackFiles(instance, projectRoot, detectedKind);
+
+          if (terminalRef.current?.writeToTerminal) {
+            terminalRef.current.writeToTerminal(
+              `ℹ Missing package.json detected, generated fallback config at ${packageJsonPath}\r\n`,
+            );
+          }
+        }
+
         setLoadingState((prev) => ({
           ...prev,
           mounting: false,
@@ -192,23 +575,21 @@ const WebContainerPreview = ({
           let installLabel = "npm install";
 
           try {
-            await instance.fs.readFile("package-lock.json", "utf8");
+            await instance.fs.readFile(packageLockPath, "utf8");
             installLabel = "npm ci --no-audit --no-fund --omit=optional";
             installProcess = await instance.spawn("npm", [
               "ci",
               "--no-audit",
               "--no-fund",
               "--omit=optional",
-            ]);
+            ], { cwd: projectRoot });
           } catch {
-            installLabel =
-              "npm install --no-save --legacy-peer-deps --production";
+            installLabel = "npm install --no-save --legacy-peer-deps";
             installProcess = await instance.spawn("npm", [
               "install",
               "--no-save",
               "--legacy-peer-deps",
-              "--production",
-            ]);
+            ], { cwd: projectRoot });
           }
 
           if (terminalRef.current?.writeToTerminal) {
@@ -270,7 +651,7 @@ const WebContainerPreview = ({
 
         let startScript: "dev" | "start" = "start";
         try {
-          const pkgRaw = await instance.fs.readFile("package.json", "utf8");
+          const pkgRaw = await instance.fs.readFile(packageJsonPath, "utf8");
           const pkg = JSON.parse(pkgRaw) as {
             scripts?: Record<string, string>;
           };
@@ -283,11 +664,15 @@ const WebContainerPreview = ({
 
         if (terminalRef.current?.writeToTerminal) {
           terminalRef.current.writeToTerminal(
-            `▶ npm run ${startScript}\r\n`,
+            `▶ npm run ${startScript} (cwd: ${projectRoot})\r\n`,
           );
         }
 
-        const startProcess = await instance.spawn("npm", ["run", startScript]);
+        const startProcess = await instance.spawn(
+          "npm",
+          ["run", startScript],
+          { cwd: projectRoot },
+        );
 
         if (!serverReadyListenerAttached.current) {
           serverReadyListenerAttached.current = true;
