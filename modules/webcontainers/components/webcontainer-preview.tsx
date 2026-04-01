@@ -281,7 +281,7 @@ const scaffoldFallbackFiles = async (
     await writeFileIfMissing(
       instance,
       toContainerPath(projectRoot, "app/page.tsx"),
-      'export default function Page() {\n  return <h1>Hello Next.js</h1>;\n}\n',
+      "export default function Page() {\n  return <h1>Hello Next.js</h1>;\n}\n",
     );
     return;
   }
@@ -314,7 +314,7 @@ const scaffoldFallbackFiles = async (
     await writeFileIfMissing(
       instance,
       toContainerPath(projectRoot, "src/App.vue"),
-      '<template><h1>Hello Vue</h1></template>\n',
+      "<template><h1>Hello Vue</h1></template>\n",
     );
     await writeFileIfMissing(
       instance,
@@ -534,7 +534,10 @@ const WebContainerPreview = ({
 
         const projectRoot = await resolveProjectRoot(instance);
         const packageJsonPath = toContainerPath(projectRoot, "package.json");
-        const packageLockPath = toContainerPath(projectRoot, "package-lock.json");
+        const packageLockPath = toContainerPath(
+          projectRoot,
+          "package-lock.json",
+        );
 
         const existingPackageJson = await readFileIfExists(
           instance,
@@ -577,19 +580,18 @@ const WebContainerPreview = ({
           try {
             await instance.fs.readFile(packageLockPath, "utf8");
             installLabel = "npm ci --no-audit --no-fund --omit=optional";
-            installProcess = await instance.spawn("npm", [
-              "ci",
-              "--no-audit",
-              "--no-fund",
-              "--omit=optional",
-            ], { cwd: projectRoot });
+            installProcess = await instance.spawn(
+              "npm",
+              ["ci", "--no-audit", "--no-fund", "--omit=optional"],
+              { cwd: projectRoot },
+            );
           } catch {
             installLabel = "npm install --no-save --legacy-peer-deps";
-            installProcess = await instance.spawn("npm", [
-              "install",
-              "--no-save",
-              "--legacy-peer-deps",
-            ], { cwd: projectRoot });
+            installProcess = await instance.spawn(
+              "npm",
+              ["install", "--no-save", "--legacy-peer-deps"],
+              { cwd: projectRoot },
+            );
           }
 
           if (terminalRef.current?.writeToTerminal) {
@@ -668,11 +670,9 @@ const WebContainerPreview = ({
           );
         }
 
-        const startProcess = await instance.spawn(
-          "npm",
-          ["run", startScript],
-          { cwd: projectRoot },
-        );
+        const startProcess = await instance.spawn("npm", ["run", startScript], {
+          cwd: projectRoot,
+        });
 
         if (!serverReadyListenerAttached.current) {
           serverReadyListenerAttached.current = true;

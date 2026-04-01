@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-
 interface CodeSuggestionRequest {
   fileContent: string;
   cursorLine: number;
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (!fileContent || cursorLine < 0 || cursorColumn < 0 || !suggestionType) {
       return NextResponse.json(
         { error: "Invalid input parameters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest) {
       fileContent,
       cursorLine,
       cursorColumn,
-      fileName
+      fileName,
     );
 
     const prompt = buildPrompt(context, suggestionType);
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
     console.error("Context analysis error:", error);
     return NextResponse.json(
       { error: "Internal server error", message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -71,7 +70,7 @@ function analyzeCodeContext(
   content: string,
   line: number,
   column: number,
-  fileName?: string
+  fileName?: string,
 ): CodeContext {
   const lines = content.split("\n");
   const currentLine = lines[line] || "";
@@ -118,7 +117,7 @@ Context:
 ${context.beforeContext}
 ${context.currentLine.substring(
   0,
-  context.cursorPosition.column
+  context.cursorPosition.column,
 )}|CURSOR|${context.currentLine.substring(context.cursorPosition.column)}
 ${context.afterContext}
 
@@ -139,37 +138,59 @@ Generate suggestion:`;
 
 async function generateSuggestion(prompt: string): Promise<string> {
   try {
-    const response = await fetch("http://localhost:11434/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "codellama:latest",
-        prompt,
-        stream: false,
-        option: {
-          temperature: 0.7,
-          max_tokens: 300,
-        },
-      }),
-    });
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
-       if (!response.ok) {
-      throw new Error(`AI service error: ${response.statusText}`)
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
-      const data = await response.json()
-    let suggestion = data.response
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: {
+              text: "You are an expert code completion assistant. Provide concise, contextually appropriate code suggestions. Only return the code to be inserted, without explanations or markdown formatting.",
+            },
+          },
+          contents: {
+            parts: {
+              text: prompt,
+            },
+          },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 300,
+          },
+        }),
+      },
+    );
 
-     // Clean up the suggestion
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error("No suggestion generated");
+    }
+
+    let suggestion = data.candidates[0].content.parts[0].text.trim();
+
+    // Clean up the suggestion if it includes code blocks
     if (suggestion.includes("```")) {
-      const codeMatch = suggestion.match(/```[\w]*\n?([\s\S]*?)```/)
-      suggestion = codeMatch ? codeMatch[1].trim() : suggestion
+      const codeMatch = suggestion.match(/```[\w]*\n?([\s\S]*?)```/);
+      suggestion = codeMatch ? codeMatch[1].trim() : suggestion;
     }
 
-    return suggestion
+    return suggestion;
   } catch (error) {
-      console.error("AI generation error:", error)
-    return "// AI suggestion unavailable"
+    console.error("AI generation error:", error);
+    return "// AI suggestion unavailable";
   }
 }
 
